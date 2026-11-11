@@ -14,7 +14,7 @@ DomainBridge agents initiate outbound HTTPS connections to the central API. A pr
 
 ## Current implementation boundary
 
-AgentCertificatePolicy validates presence, validity period, EKU and thumbprint binding. Chain trust and revocation require the enterprise PKI configuration; they are not bypassed or marked trusted by this MVP.
+Outside Development and Testing, Kestrel requires a client certificate and accepts it only when the operating-system chain validation has no policy error. AgentCertificatePolicy additionally validates presence, validity period, EKU and thumbprint binding. Chain trust and revocation are supplied by the enterprise PKI configuration; they are not bypassed or marked trusted by this MVP.
 
 ## Deployment requirement
 

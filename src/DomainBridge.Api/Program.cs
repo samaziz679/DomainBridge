@@ -1,8 +1,24 @@
 using System.Text.Json;
 using DomainBridge.Contracts;
+using System.Net.Security;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
+var agentTransportRequired =
+    !(builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"));
+
+if (agentTransportRequired)
+{
+    builder.WebHost.ConfigureKestrel(options =>
+        options.ConfigureHttpsDefaults(https =>
+        {
+            https.ClientCertificateMode = ClientCertificateMode.RequireCertificate;
+            https.ClientCertificateValidation = (_, _, policyErrors) =>
+                policyErrors == SslPolicyErrors.None;
+        }));
+}
+
 var auditConnectionString = builder.Configuration.GetConnectionString("Audit");
 var auditStorageMode = AuditStorageSelector.Select(
     builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"),
@@ -24,6 +40,14 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore auditStore) =>
 {
+    var transportValidation = AgentTransportSecurity.Validate(
+        request.HttpContext.Connection.ClientCertificate,
+        agentTransportRequired);
+    if (!transportValidation.IsSuccess)
+    {
+        return Results.Unauthorized();
+    }
+
     JsonDocument document;
 
     try
@@ -72,6 +96,14 @@ app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore audit
 
 app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditStore) =>
 {
+    var transportValidation = AgentTransportSecurity.Validate(
+        request.HttpContext.Connection.ClientCertificate,
+        agentTransportRequired);
+    if (!transportValidation.IsSuccess)
+    {
+        return Results.Unauthorized();
+    }
+
     JsonDocument document;
 
     try
