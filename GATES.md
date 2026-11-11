@@ -13,5 +13,5 @@ Scope: establish the documented, reviewable foundation for secure DomainBridge d
 - [x] G3: The deployment design requires one signed agent distributed through both Intune and GPO.
   EVIDENCE: 2026-11-11 — reviewed docs/ARCHITECTURE.md deployment architecture.
 
-- [ ] G4: ECC Tools has been installed on this repository and its generated PR has been reviewed.
-  EVIDENCE: pending
+- [x] G4: ECC Tools has been installed on this repository and its generated PR has been reviewed.
+  EVIDENCE: 2026-11-11 — ECC Tools PR #3 reviewed; changes requested before merge because generated project conventions and MCP baseline were not evidence-based or approved.
