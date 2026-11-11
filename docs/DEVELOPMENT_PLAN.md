@@ -2,7 +2,7 @@
 
 ## Context
 
-DomainBridge supports the controlled migration of Windows endpoints and profiles from the TerangaGold domain to `edv-ops.com`.
+DomainBridge supports the controlled migration of Windows endpoints and profiles from a **source domain A** to a **target domain B**.
 
 ## Stages
 
