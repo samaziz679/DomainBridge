@@ -24,6 +24,15 @@ public sealed class EnrollmentRequestTests
     }
 
     [Fact]
+    public void Create_rejects_a_missing_agent_version()
+    {
+        var result = EnrollmentRequest.Create("device-001", "A1B2C3", null);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(EnrollmentError.MissingAgentVersion, result.Error);
+    }
+
+    [Fact]
     public void Create_accepts_identity_metadata_without_any_secret()
     {
         var result = EnrollmentRequest.Create("device-001", "A1B2C3", "agent/1.0");
