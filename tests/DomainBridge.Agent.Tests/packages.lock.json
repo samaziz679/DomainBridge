@@ -108,6 +108,12 @@
         }
       },
       "domainbridge.agent": {
+        "type": "Project",
+        "dependencies": {
+          "DomainBridge.Contracts": "[1.0.0, )"
+        }
+      },
+      "domainbridge.contracts": {
         "type": "Project"
       }
     }

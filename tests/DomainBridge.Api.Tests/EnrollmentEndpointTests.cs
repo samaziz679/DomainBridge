@@ -157,4 +157,45 @@ public sealed class EnrollmentEndpointTests : IClassFixture<WebApplicationFactor
         Assert.Equal("agent.inventory.reported", entry.Action);
         Assert.Equal("device-inventory-001", entry.SubjectId);
     }
+
+    [Fact]
+    public async Task Inventory_rejects_incomplete_metadata()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/inventory", new
+        {
+            deviceId = "",
+            operatingSystem = "Windows 11",
+            architecture = "X64",
+            agentVersion = "agent/1.0",
+            capturedAtUtc = "2026-11-11T00:00:00+00:00"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Inventory_rejects_a_secret_like_field()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/inventory", new
+        {
+            deviceId = "device-inventory-001",
+            operatingSystem = "Windows 11",
+            architecture = "X64",
+            agentVersion = "agent/1.0",
+            capturedAtUtc = "2026-11-11T00:00:00+00:00",
+            password = "must-not-be-accepted"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Inventory_rejects_invalid_json()
+    {
+        using var content = new StringContent("{", System.Text.Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("/api/v1/inventory", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

@@ -55,6 +55,59 @@ app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore audit
     }
 });
 
+app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditStore) =>
+{
+    JsonDocument document;
+
+    try
+    {
+        document = await JsonDocument.ParseAsync(request.Body);
+    }
+    catch (JsonException)
+    {
+        return Results.BadRequest(new { error = "invalid_json" });
+    }
+
+    using (document)
+    {
+        if (document.RootElement.ValueKind != JsonValueKind.Object ||
+            document.RootElement.EnumerateObject().Any(property => !InventoryPayload.AllowedFields.Contains(property.Name)))
+        {
+            return Results.BadRequest(new { error = "unsupported_inventory_field" });
+        }
+
+        var payload = document.RootElement.Deserialize<InventoryPayload>(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        if (payload is null ||
+            string.IsNullOrWhiteSpace(payload.DeviceId) ||
+            string.IsNullOrWhiteSpace(payload.OperatingSystem) ||
+            string.IsNullOrWhiteSpace(payload.Architecture) ||
+            string.IsNullOrWhiteSpace(payload.AgentVersion) ||
+            payload.CapturedAtUtc == default)
+        {
+            return Results.BadRequest(new { error = "invalid_inventory_metadata" });
+        }
+
+        var inventory = new DeviceInventoryReport(
+            payload.DeviceId.Trim(),
+            payload.OperatingSystem.Trim(),
+            payload.Architecture.Trim(),
+            payload.AgentVersion.Trim(),
+            payload.CapturedAtUtc);
+
+        auditStore.Append(new AuditEvent(
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            "agent.inventory.reported",
+            inventory.DeviceId));
+
+        return Results.Accepted($"/api/v1/inventory/{inventory.DeviceId}");
+    }
+});
+
 app.Run();
 
 public sealed record EnrollmentPayload(
@@ -74,5 +127,22 @@ public sealed record EnrollmentResponse(
     string AgentId,
     string CertificateThumbprint,
     string AgentVersion);
+
+public sealed record InventoryPayload(
+    string? DeviceId,
+    string? OperatingSystem,
+    string? Architecture,
+    string? AgentVersion,
+    DateTimeOffset CapturedAtUtc)
+{
+    public static readonly ISet<string> AllowedFields = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "deviceId",
+        "operatingSystem",
+        "architecture",
+        "agentVersion",
+        "capturedAtUtc"
+    };
+}
 
 public partial class Program;
