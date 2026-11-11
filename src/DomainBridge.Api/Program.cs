@@ -2,11 +2,12 @@ using System.Text.Json;
 using DomainBridge.Contracts;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton<IAuditStore, InMemoryAuditStore>();
 var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-app.MapPost("/api/v1/enrollments", async (HttpRequest request) =>
+app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore auditStore) =>
 {
     JsonDocument document;
 
@@ -40,6 +41,12 @@ app.MapPost("/api/v1/enrollments", async (HttpRequest request) =>
         {
             return Results.BadRequest(new { error = enrollment.Error.ToString() });
         }
+
+        auditStore.Append(new AuditEvent(
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            "agent.enrolled",
+            enrollment.Value!.AgentId));
 
         return Results.Ok(new EnrollmentResponse(
             enrollment.Value!.AgentId,
