@@ -34,4 +34,27 @@ public sealed class DeviceInventorySnapshotTests
     {
         Assert.Throws<ArgumentException>(() => DeviceInventorySnapshot.Capture(" "));
     }
+
+    [Fact]
+    public void Inventory_command_writes_a_non_secret_snapshot_for_the_supported_argument()
+    {
+        using var output = new StringWriter();
+
+        var handled = AgentCommand.TryRun(["--inventory-once"], output, "agent/1.0");
+
+        Assert.True(handled);
+        Assert.Contains("DeviceId", output.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("password", output.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Inventory_command_does_not_handle_unknown_arguments()
+    {
+        using var output = new StringWriter();
+
+        var handled = AgentCommand.TryRun(["--unsupported"], output, "agent/1.0");
+
+        Assert.False(handled);
+        Assert.Empty(output.ToString());
+    }
 }
