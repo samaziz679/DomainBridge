@@ -1,0 +1,27 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="DomainBridge Test Lab"
+    Manufacturer="DomainBridge"
+    Version="0.1.0"
+    UpgradeCode="{C34D1D52-7EC4-48A4-9BDB-9315B0C1AC08}"
+    Language="1033"
+    Scope="perMachine">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of DomainBridge Test Lab is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="DomainBridge Test Lab" />
+    </StandardDirectory>
+
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Files Include="$(var.AgentPublishDir)\**" />
+      <Files Include="$(var.InstallerSourceDir)\Run-DomainBridgeTestLab.cmd" />
+      <Files Include="$(var.InstallerSourceDir)\README.txt" />
+    </ComponentGroup>
+
+    <Feature Id="MainFeature" Title="DomainBridge Test Lab" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+  </Package>
+</Wix>
