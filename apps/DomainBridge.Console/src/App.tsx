@@ -1,5 +1,6 @@
 import brandMark from './assets/domainbridge-mark.svg'
 import './index.css'
+import type { AgentRecord, AuditRecord } from './api'
 
 export interface DashboardModel {
   apiStatus: 'healthy' | 'unavailable'
@@ -8,7 +9,17 @@ export interface DashboardModel {
   lastAuditAction: string
 }
 
-export function App({ dashboard }: { dashboard: DashboardModel }) {
+export function App({
+  dashboard,
+  agents = [],
+  audit = [],
+  connectionError
+}: {
+  dashboard: DashboardModel
+  agents?: AgentRecord[]
+  audit?: AuditRecord[]
+  connectionError?: string
+}) {
   const apiIsHealthy = dashboard.apiStatus === 'healthy'
 
   return (
@@ -94,8 +105,38 @@ export function App({ dashboard }: { dashboard: DashboardModel }) {
           </article>
         </section>
 
+        {connectionError && (
+          <p className="connection-notice" role="status">
+            Live control-plane data is unavailable. {connectionError}
+          </p>
+        )}
+
         <section className="content-grid">
-          <article className="panel audit-panel">
+          <article className="panel agents-panel" id="agents">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">Technical inventory</p>
+                <h2>Agents</h2>
+              </div>
+              <span className="panel-count">{agents.length} shown</span>
+            </div>
+            <div className="device-list" aria-label="Managed agents">
+              {agents.length === 0 ? (
+                <p className="empty-state">No technical inventory has been reported yet.</p>
+              ) : agents.map(agent => (
+                <div className="device-row" key={agent.deviceId}>
+                  <div className="event-icon" aria-hidden="true">⌘</div>
+                  <div>
+                    <strong>{agent.deviceId}</strong>
+                    <p>{agent.operatingSystem} · {agent.architecture} · agent {agent.agentVersion}</p>
+                  </div>
+                  <time>{new Date(agent.capturedAtUtc).toLocaleDateString()}</time>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel audit-panel" id="audit">
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Latest evidence</p>
@@ -103,13 +144,19 @@ export function App({ dashboard }: { dashboard: DashboardModel }) {
               </div>
               <a href="#audit">View all <span aria-hidden="true">→</span></a>
             </div>
-            <div className="audit-event">
-              <div className="event-icon" aria-hidden="true">✓</div>
-              <div>
-                <strong>{dashboard.lastAuditAction}</strong>
-                <p>Latest controlled event from the DomainBridge platform.</p>
-              </div>
-              <time>Just now</time>
+            <div className="audit-list">
+              {audit.length === 0 ? (
+                <div className="audit-event">
+                  <div className="event-icon" aria-hidden="true">✓</div>
+                  <div><strong>{dashboard.lastAuditAction}</strong><p>No audit evidence is available yet.</p></div>
+                </div>
+              ) : audit.slice(0, 3).map(event => (
+                <div className="audit-event" key={event.eventId}>
+                  <div className="event-icon" aria-hidden="true">✓</div>
+                  <div><strong>{event.action}</strong><p>{event.subjectId}</p></div>
+                  <time>{new Date(event.occurredAtUtc).toLocaleDateString()}</time>
+                </div>
+              ))}
             </div>
           </article>
 

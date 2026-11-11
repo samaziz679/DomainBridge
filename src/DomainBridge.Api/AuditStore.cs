@@ -11,6 +11,10 @@ public interface IAuditStore
 {
     IReadOnlyCollection<AuditEvent> Events { get; }
 
+    int Count { get; }
+
+    IReadOnlyCollection<AuditEvent> GetRecent(int limit);
+
     void Append(AuditEvent auditEvent);
 }
 
@@ -20,16 +24,32 @@ public sealed class InMemoryAuditStore : IAuditStore
 
     public IReadOnlyCollection<AuditEvent> Events => _events.ToArray();
 
+    public int Count => _events.Count;
+
     public void Append(AuditEvent auditEvent)
     {
         _events.Enqueue(auditEvent);
     }
+
+    public IReadOnlyCollection<AuditEvent> GetRecent(int limit) =>
+        _events.OrderByDescending(auditEvent => auditEvent.OccurredAtUtc).Take(limit).ToArray();
 }
 
 public sealed class PostgresAuditStore(NpgsqlDataSource dataSource) : IAuditStore
 {
     public IReadOnlyCollection<AuditEvent> Events =>
-        throw new NotSupportedException("PostgreSQL audit events are queried through a read model, not the write store.");
+        GetRecent(int.MaxValue);
+
+    public int Count
+    {
+        get
+        {
+            using var connection = dataSource.OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM audit_events;";
+            return Convert.ToInt32(command.ExecuteScalar());
+        }
+    }
 
     public void Append(AuditEvent auditEvent)
     {
@@ -44,6 +64,31 @@ public sealed class PostgresAuditStore(NpgsqlDataSource dataSource) : IAuditStor
         command.Parameters.AddWithValue("action", auditEvent.Action);
         command.Parameters.AddWithValue("subject_id", auditEvent.SubjectId);
         command.ExecuteNonQuery();
+    }
+
+    public IReadOnlyCollection<AuditEvent> GetRecent(int limit)
+    {
+        using var connection = dataSource.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT event_id, occurred_at_utc, action, subject_id
+            FROM audit_events
+            ORDER BY occurred_at_utc DESC
+            LIMIT @limit;
+            """;
+        command.Parameters.AddWithValue("limit", limit);
+        using var reader = command.ExecuteReader();
+        var events = new List<AuditEvent>();
+        while (reader.Read())
+        {
+            events.Add(new AuditEvent(
+                reader.GetGuid(0),
+                reader.GetFieldValue<DateTimeOffset>(1),
+                reader.GetString(2),
+                reader.GetString(3)));
+        }
+
+        return events;
     }
 }
 

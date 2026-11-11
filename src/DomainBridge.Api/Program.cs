@@ -28,15 +28,49 @@ if (auditStorageMode == AuditStorageMode.Postgres)
 {
     builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(auditConnectionString!));
     builder.Services.AddSingleton<IAuditStore, PostgresAuditStore>();
+    builder.Services.AddSingleton<IInventoryStore, PostgresInventoryStore>();
 }
 else
 {
     builder.Services.AddSingleton<IAuditStore, InMemoryAuditStore>();
+    builder.Services.AddSingleton<IInventoryStore, InMemoryInventoryStore>();
 }
 
 var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+app.MapGet("/api/v1/console/overview", (IAuditStore auditStore, IInventoryStore inventoryStore) =>
+{
+    var recentAudit = auditStore.GetRecent(1).FirstOrDefault();
+    return Results.Ok(new
+    {
+        apiStatus = "healthy",
+        enrolledAgents = inventoryStore.GetRecent(1000).Count,
+        auditEvents = auditStore.Count,
+        lastAuditAction = recentAudit?.Action ?? "none"
+    });
+});
+
+app.MapGet("/api/v1/console/agents", (int? limit, IInventoryStore inventoryStore) =>
+{
+    if (!ConsoleQuery.IsValidLimit(limit))
+    {
+        return Results.BadRequest(new { error = "invalid_limit" });
+    }
+
+    return Results.Ok(inventoryStore.GetRecent(ConsoleQuery.ResolveLimit(limit)));
+});
+
+app.MapGet("/api/v1/console/audit", (int? limit, IAuditStore auditStore) =>
+{
+    if (!ConsoleQuery.IsValidLimit(limit))
+    {
+        return Results.BadRequest(new { error = "invalid_limit" });
+    }
+
+    return Results.Ok(auditStore.GetRecent(ConsoleQuery.ResolveLimit(limit)));
+});
 
 app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore auditStore) =>
 {
@@ -94,7 +128,7 @@ app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore audit
     }
 });
 
-app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditStore) =>
+app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditStore, IInventoryStore inventoryStore) =>
 {
     var transportValidation = AgentTransportSecurity.Validate(
         request.HttpContext.Connection.ClientCertificate,
@@ -145,6 +179,8 @@ app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditSt
             payload.AgentVersion.Trim(),
             payload.CapturedAtUtc);
 
+        inventoryStore.Upsert(inventory);
+
         auditStore.Append(new AuditEvent(
             Guid.NewGuid(),
             DateTimeOffset.UtcNow,
@@ -190,6 +226,16 @@ public sealed record InventoryPayload(
         "agentVersion",
         "capturedAtUtc"
     };
+}
+
+public static class ConsoleQuery
+{
+    private const int DefaultLimit = 25;
+    private const int MaximumLimit = 100;
+
+    public static bool IsValidLimit(int? limit) => !limit.HasValue || (limit.Value >= 1 && limit.Value <= MaximumLimit);
+
+    public static int ResolveLimit(int? limit) => limit ?? DefaultLimit;
 }
 
 public partial class Program;
