@@ -135,4 +135,26 @@ public sealed class EnrollmentEndpointTests : IClassFixture<WebApplicationFactor
         Assert.Equal("device-audit-001", entry.SubjectId);
         Assert.DoesNotContain("password", entry.ToString(), StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task Inventory_accepts_technical_device_metadata_and_appends_audit_event()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/inventory", new
+        {
+            deviceId = "device-inventory-001",
+            operatingSystem = "Windows 11",
+            architecture = "X64",
+            agentVersion = "agent/1.0",
+            capturedAtUtc = "2026-11-11T00:00:00+00:00"
+        });
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var audit = scope.ServiceProvider.GetRequiredService<IAuditStore>();
+        var entry = audit.Events.Last();
+
+        Assert.Equal("agent.inventory.reported", entry.Action);
+        Assert.Equal("device-inventory-001", entry.SubjectId);
+    }
 }
