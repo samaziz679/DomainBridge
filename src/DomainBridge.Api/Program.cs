@@ -5,12 +5,13 @@ using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
+var consoleAccess = builder.Configuration.GetSection(ConsoleAccessOptions.SectionName).Get<ConsoleAccessOptions>() ?? new();
 var agentTransportRequired =
     !(builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"));
 var consoleReadApiEnabled =
     builder.Environment.IsDevelopment() ||
     builder.Environment.IsEnvironment("Testing") ||
-    builder.Configuration.GetValue<bool>("Console:EnableReadApi");
+    consoleAccess.IsReady();
 
 if (agentTransportRequired)
 {
