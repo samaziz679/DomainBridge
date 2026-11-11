@@ -1,8 +1,23 @@
 using System.Text.Json;
 using DomainBridge.Contracts;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSingleton<IAuditStore, InMemoryAuditStore>();
+var auditConnectionString = builder.Configuration.GetConnectionString("Audit");
+var auditStorageMode = AuditStorageSelector.Select(
+    builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"),
+    auditConnectionString);
+
+if (auditStorageMode == AuditStorageMode.Postgres)
+{
+    builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(auditConnectionString!));
+    builder.Services.AddSingleton<IAuditStore, PostgresAuditStore>();
+}
+else
+{
+    builder.Services.AddSingleton<IAuditStore, InMemoryAuditStore>();
+}
+
 var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
