@@ -7,6 +7,10 @@ using Npgsql;
 var builder = WebApplication.CreateBuilder(args);
 var agentTransportRequired =
     !(builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"));
+var consoleReadApiEnabled =
+    builder.Environment.IsDevelopment() ||
+    builder.Environment.IsEnvironment("Testing") ||
+    builder.Configuration.GetValue<bool>("Console:EnableReadApi");
 
 if (agentTransportRequired)
 {
@@ -40,37 +44,40 @@ var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-app.MapGet("/api/v1/console/overview", (IAuditStore auditStore, IInventoryStore inventoryStore) =>
+if (consoleReadApiEnabled)
 {
-    var recentAudit = auditStore.GetRecent(1).FirstOrDefault();
-    return Results.Ok(new
+    app.MapGet("/api/v1/console/overview", (IAuditStore auditStore, IInventoryStore inventoryStore) =>
     {
-        apiStatus = "healthy",
-        enrolledAgents = inventoryStore.GetRecent(1000).Count,
-        auditEvents = auditStore.Count,
-        lastAuditAction = recentAudit?.Action ?? "none"
+        var recentAudit = auditStore.GetRecent(1).FirstOrDefault();
+        return Results.Ok(new
+        {
+            apiStatus = "healthy",
+            enrolledAgents = inventoryStore.GetRecent(1000).Count,
+            auditEvents = auditStore.Count,
+            lastAuditAction = recentAudit?.Action ?? "none"
+        });
     });
-});
 
-app.MapGet("/api/v1/console/agents", (int? limit, IInventoryStore inventoryStore) =>
-{
-    if (!ConsoleQuery.IsValidLimit(limit))
+    app.MapGet("/api/v1/console/agents", (int? limit, IInventoryStore inventoryStore) =>
     {
-        return Results.BadRequest(new { error = "invalid_limit" });
-    }
+        if (!ConsoleQuery.IsValidLimit(limit))
+        {
+            return Results.BadRequest(new { error = "invalid_limit" });
+        }
 
-    return Results.Ok(inventoryStore.GetRecent(ConsoleQuery.ResolveLimit(limit)));
-});
+        return Results.Ok(inventoryStore.GetRecent(ConsoleQuery.ResolveLimit(limit)));
+    });
 
-app.MapGet("/api/v1/console/audit", (int? limit, IAuditStore auditStore) =>
-{
-    if (!ConsoleQuery.IsValidLimit(limit))
+    app.MapGet("/api/v1/console/audit", (int? limit, IAuditStore auditStore) =>
     {
-        return Results.BadRequest(new { error = "invalid_limit" });
-    }
+        if (!ConsoleQuery.IsValidLimit(limit))
+        {
+            return Results.BadRequest(new { error = "invalid_limit" });
+        }
 
-    return Results.Ok(auditStore.GetRecent(ConsoleQuery.ResolveLimit(limit)));
-});
+        return Results.Ok(auditStore.GetRecent(ConsoleQuery.ResolveLimit(limit)));
+    });
+}
 
 app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore auditStore) =>
 {
