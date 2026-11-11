@@ -11,7 +11,7 @@ $publishRoot = Join-Path $repositoryRoot 'artifacts\test-lab-agent'
 $outputRoot = Join-Path $repositoryRoot 'artifacts\test-lab-installer'
 $agentProject = Join-Path $repositoryRoot 'src\DomainBridge.Agent\DomainBridge.Agent.csproj'
 $sourceFile = Join-Path $PSScriptRoot 'Product.wxs'
-$msiPath = Join-Path $outputRoot 'DomainBridge-TestLab-0.1.0.msi'
+$msiPath = Join-Path $outputRoot 'DomainBridge-TestLab-0.2.0.msi'
 
 Remove-Item -LiteralPath $publishRoot -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $publishRoot, $outputRoot -Force | Out-Null
