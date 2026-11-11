@@ -4,7 +4,7 @@ Plateforme sécurisée de migration de postes et de profils Windows entre un dom
 
 ## Objectif du MVP
 
-DomainBridge orchestre, audite et contrôle la migration de postes Windows de **TerangaGold** vers **edv-ops.com**, sans stocker de mots de passe d'administrateur sur les postes.
+DomainBridge orchestre, audite et contrôle la migration de postes Windows du **domaine source A** vers le **domaine cible B**, sans stocker de mots de passe d'administrateur sur les postes.
 
 ## Principes de sécurité
 
