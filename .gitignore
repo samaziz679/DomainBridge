@@ -3,5 +3,6 @@
 **/TestResults/
 **/node_modules/
 **/dist/
+artifacts/
 *.tsbuildinfo
 .vs/
