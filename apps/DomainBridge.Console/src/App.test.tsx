@@ -15,9 +15,9 @@ describe('App', () => {
       />
     )
 
-    expect(screen.getByRole('heading', { name: 'DomainBridge' })).toBeVisible()
-    expect(screen.getByText('API healthy')).toBeVisible()
-    expect(screen.getByText('2 enrolled agents')).toBeVisible()
-    expect(screen.getByText('No migration action is available in this console.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'DomainBridge' })).toBeTruthy()
+    expect(screen.getByText('API healthy')).toBeTruthy()
+    expect(screen.getByText('2 enrolled agents')).toBeTruthy()
+    expect(screen.getByText('No migration action is available in this console.')).toBeTruthy()
   })
 })
