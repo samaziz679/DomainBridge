@@ -15,4 +15,4 @@ The durable tables store only an event UUID, UTC timestamp, action, device ident
 - Require encrypted PostgreSQL transport and server certificate validation.
 - Back up the database under the organisation retention policy.
 - Forward database or API audit events to the approved SIEM using a separately reviewed integration.
-- Put the console behind the organisation's OIDC-enabled reverse proxy. The browser sends only its authenticated session (`credentials: include`); it never stores an API password or client certificate.
+- In production, `Console:EnableReadApi` is disabled by default. Enable it only after placing the console/API path behind the organisation's OIDC-enabled reverse proxy. The browser sends only its authenticated session (`credentials: include`); it never stores an API password or client certificate.
