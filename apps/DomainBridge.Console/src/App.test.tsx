@@ -15,9 +15,11 @@ describe('App', () => {
       />
     )
 
-    expect(screen.getByRole('heading', { name: 'DomainBridge' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Domain migration, under control.' })).toBeTruthy()
+    expect(screen.getByText('Read-only command center')).toBeTruthy()
     expect(screen.getByText('API healthy')).toBeTruthy()
-    expect(screen.getByText('2 enrolled agents')).toBeTruthy()
+    expect(screen.getByText('2')).toBeTruthy()
+    expect(screen.getByText('enrolled agents')).toBeTruthy()
     expect(screen.getByText('No migration action is available in this console.')).toBeTruthy()
   })
 })
