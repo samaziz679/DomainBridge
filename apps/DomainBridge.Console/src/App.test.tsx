@@ -34,7 +34,7 @@ describe('App', () => {
     expect(screen.getByText('2')).toBeTruthy()
     expect(screen.getByText('enrolled agents')).toBeTruthy()
     expect(screen.getByText('No migration action is available in this console.')).toBeTruthy()
-    expect(screen.getByText('device-001')).toBeTruthy()
+    expect(screen.getAllByText('device-001')).toHaveLength(2)
     expect(screen.getByText('agent.inventory.reported')).toBeTruthy()
   })
 })

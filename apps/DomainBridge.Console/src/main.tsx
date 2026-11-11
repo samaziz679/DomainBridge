@@ -1,17 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { App } from './App'
+import { LiveConsole } from './LiveConsole'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App
-      dashboard={{
-        apiStatus: 'unavailable',
-        enrolledAgents: 0,
-        auditEvents: 0,
-        lastAuditAction: 'none'
-      }}
-    />
+    <LiveConsole apiBaseUrl={import.meta.env.VITE_DOMAINBRIDGE_API_URL ?? window.location.origin} />
   </StrictMode>
 )
