@@ -36,7 +36,31 @@ public sealed class AgentCertificatePolicyTests
         Assert.Equal(AgentCertificateError.ThumbprintMismatch, result.Error);
     }
 
-    private static X509Certificate2 CreateCertificate(bool includeClientAuthentication)
+    [Fact]
+    public void Validate_rejects_a_missing_certificate()
+    {
+        var result = AgentCertificatePolicy.Validate(null, "A1B2C3");
+
+        Assert.Equal(AgentCertificateError.CertificateRequired, result.Error);
+    }
+
+    [Fact]
+    public void Validate_rejects_an_expired_certificate()
+    {
+        using var certificate = CreateCertificate(
+            includeClientAuthentication: true,
+            notBefore: DateTimeOffset.UtcNow.AddDays(-2),
+            notAfter: DateTimeOffset.UtcNow.AddDays(-1));
+
+        var result = AgentCertificatePolicy.Validate(certificate, certificate.Thumbprint!);
+
+        Assert.Equal(AgentCertificateError.CertificateOutsideValidityPeriod, result.Error);
+    }
+
+    private static X509Certificate2 CreateCertificate(
+        bool includeClientAuthentication,
+        DateTimeOffset? notBefore = null,
+        DateTimeOffset? notAfter = null)
     {
         using var key = RSA.Create(2048);
         var request = new CertificateRequest(
@@ -53,7 +77,7 @@ public sealed class AgentCertificatePolicyTests
         }
 
         return request.CreateSelfSigned(
-            DateTimeOffset.UtcNow.AddMinutes(-1),
-            DateTimeOffset.UtcNow.AddDays(1));
+            notBefore ?? DateTimeOffset.UtcNow.AddMinutes(-1),
+            notAfter ?? DateTimeOffset.UtcNow.AddDays(1));
     }
 }
