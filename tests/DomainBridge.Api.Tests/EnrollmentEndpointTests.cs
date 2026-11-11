@@ -52,6 +52,32 @@ public sealed class EnrollmentEndpointTests : IClassFixture<WebApplicationFactor
     }
 
     [Fact]
+    public async Task Enrollment_rejects_missing_agent_identifier()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/enrollments", new
+        {
+            agentId = "",
+            certificateThumbprint = "A1B2C3",
+            agentVersion = "agent/1.0"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Enrollment_rejects_missing_agent_version()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/enrollments", new
+        {
+            agentId = "device-001",
+            certificateThumbprint = "A1B2C3",
+            agentVersion = ""
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Enrollment_rejects_secret_like_fields()
     {
         using var content = JsonContent.Create(new
@@ -61,6 +87,26 @@ public sealed class EnrollmentEndpointTests : IClassFixture<WebApplicationFactor
             agentVersion = "agent/1.0",
             password = "must-not-be-accepted"
         });
+
+        var response = await _client.PostAsync("/api/v1/enrollments", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Enrollment_rejects_invalid_json()
+    {
+        using var content = new StringContent("{", System.Text.Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("/api/v1/enrollments", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Enrollment_rejects_a_non_object_payload()
+    {
+        using var content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json");
 
         var response = await _client.PostAsync("/api/v1/enrollments", content);
 
