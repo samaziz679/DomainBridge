@@ -2,7 +2,7 @@
 
 ## Product boundary
 
-DomainBridge migrates authorised Windows endpoints and existing Windows profiles from TerangaGold to edv-ops.com. It is an administration and migration tool, not a credential-recovery or security-bypass tool.
+DomainBridge migrates authorised Windows endpoints and existing Windows profiles from a **source domain A** to a **target domain B**. It is an administration and migration tool, not a credential-recovery or security-bypass tool.
 
 ## Mandatory safety rules
 
