@@ -24,3 +24,9 @@ The configuration gate does not itself authenticate an operator or validate a si
 5. Write durable audit evidence before and after execution.
 
 Do not enable elevated execution until all runtime controls are implemented and tested with a laboratory PKI and synthetic devices.
+
+## Current certificate control
+
+`PublisherCertificatePolicy` now performs a local, deterministic check of the configured publisher allow-list: the presented certificate must be current, explicitly trusted by thumbprint and carry the `Code Signing` EKU (`1.3.6.1.5.5.7.3.3`).
+
+This is deliberately not a claim that an action package has been signed or that its certificate chain has been validated. A future manifest-verification component must verify the detached CMS signature over the exact manifest bytes and apply the laboratory PKI chain policy before an elevated action can become executable.
