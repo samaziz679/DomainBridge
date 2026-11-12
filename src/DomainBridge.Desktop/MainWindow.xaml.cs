@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -7,6 +8,7 @@ namespace DomainBridge.Desktop;
 
 public partial class MainWindow : Window
 {
+    private static bool apiLaunchAttempted;
     private static readonly HttpClient Client = new() { BaseAddress = new Uri("http://127.0.0.1:5080") };
     private static readonly Dictionary<string, (string Primary, string Detail)> Modules = new()
     {
@@ -57,9 +59,27 @@ public partial class MainWindow : Window
         }
         catch
         {
+            if (StartPackagedApi())
+            {
+                PrimaryMessage.Text = "Démarrage de l’API locale…";
+                SecondaryMessage.Text = "Actualisation automatique du parc dans quelques secondes.";
+                await Task.Delay(TimeSpan.FromSeconds(2));
+                await RefreshOverviewAsync();
+                return;
+            }
+
             PrimaryMessage.Text = "API locale indisponible.";
-            SecondaryMessage.Text = "Démarrez le service DomainBridge ou installez le package complet pour connecter le parc.";
+            SecondaryMessage.Text = "Installez le package complet pour connecter le parc.";
         }
+    }
+
+    private static bool StartPackagedApi()
+    {
+        var apiPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "Console", "DomainBridge.Api.exe"));
+        if (apiLaunchAttempted || !File.Exists(apiPath)) return false;
+        apiLaunchAttempted = true;
+        Process.Start(new ProcessStartInfo(apiPath, "--urls http://127.0.0.1:5080") { UseShellExecute = false, CreateNoWindow = true });
+        return true;
     }
 
     private void CreatePilotPlan_Click(object sender, RoutedEventArgs e) => MigrationStatus.Text = "Plan pilote créé : découverte → prérequis → approbation → vague pilote → validation → rollback si nécessaire.";
