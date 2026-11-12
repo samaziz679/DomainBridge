@@ -31,4 +31,6 @@ Do not enable elevated execution until all runtime controls are implemented and 
 
 `SignedManifestPolicy` now verifies a detached CMS signature against the exact manifest bytes and then applies `PublisherCertificatePolicy` to the embedded signer certificate. It rejects altered content, attached CMS packages and unknown publishers.
 
-This is deliberately not a claim that the certificate chain has been validated against a laboratory or production PKI. A future chain-policy component must establish the approved trust roots, revocation policy and timestamp policy before an elevated action can become executable.
+`PublisherCertificateChainPolicy` now builds the signer chain only against the explicit custom root set supplied by the host. It disables certificate downloads and does not silently use the local Windows trust store.
+
+This chain policy is not yet connected to the signed-manifest validator or an execution endpoint. Its laboratory mode does not perform revocation or timestamp checks. A production integration must supply approved roots, define the CRL/OCSP and timestamp policy, and bind the successful chain result to the accepted manifest before an elevated action can become executable.
