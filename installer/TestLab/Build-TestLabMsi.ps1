@@ -14,7 +14,7 @@ $apiProject = Join-Path $repositoryRoot 'src\DomainBridge.Api\DomainBridge.Api.c
 $desktopProject = Join-Path $repositoryRoot 'src\DomainBridge.Desktop\DomainBridge.Desktop.csproj'
 $consoleRoot = Join-Path $repositoryRoot 'apps\DomainBridge.Console'
 $sourceFile = Join-Path $PSScriptRoot 'Product.wxs'
-$msiPath = Join-Path $outputRoot 'DomainBridge-TestLab-0.2.4.msi'
+$msiPath = Join-Path $outputRoot 'DomainBridge-TestLab-0.2.5.msi'
 
 Remove-Item -LiteralPath $publishRoot -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $publishRoot, $outputRoot -Force | Out-Null
@@ -29,7 +29,7 @@ if ($LASTEXITCODE -ne 0) {
 
 dotnet publish $apiProject --configuration $Configuration --runtime win-x64 --self-contained true --output (Join-Path $publishRoot 'Console')
 if ($LASTEXITCODE -ne 0) { throw "API publish failed with exit code $LASTEXITCODE." }
-Copy-Item -LiteralPath (Join-Path $consoleRoot 'dist\*') -Destination (Join-Path $publishRoot 'Console\wwwroot') -Recurse -Force
+Copy-Item -Path (Join-Path $consoleRoot 'dist\*') -Destination (Join-Path $publishRoot 'Console\wwwroot') -Recurse -Force
 
 dotnet publish $desktopProject --configuration $Configuration --runtime win-x64 --self-contained true --output (Join-Path $publishRoot 'Desktop')
 if ($LASTEXITCODE -ne 0) { throw "Desktop publish failed with exit code $LASTEXITCODE." }

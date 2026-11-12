@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private void Navigation_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (Navigation.SelectedItem is not ListBoxItem item) return;
+        if (MigrationWorkspace is null || PrimaryMessage is null || SecondaryMessage is null) return;
         var section = item.Content?.ToString() ?? "Parc";
         SectionTitle.Text = section;
         var migration = section == "Migration";
