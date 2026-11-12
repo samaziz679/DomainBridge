@@ -18,9 +18,9 @@
       <Component Id="DesktopShortcutComponent" Guid="{DA8BBA3D-925D-4D91-B79A-04564F5AF204}">
         <Shortcut
           Id="DesktopShortcut"
-          Name="DomainBridge Test Lab"
-          Description="Run DomainBridge read-only inventory"
-          Target="[INSTALLFOLDER]Run-DomainBridgeTestLab.cmd"
+          Name="DomainBridge"
+          Description="Open the DomainBridge local console"
+          Target="[INSTALLFOLDER]Run-DomainBridgeConsole.cmd"
           WorkingDirectory="INSTALLFOLDER" />
         <RegistryValue Root="HKLM" Key="Software\DomainBridge\TestLab" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
       </Component>
@@ -31,9 +31,9 @@
         <Component Id="StartMenuShortcutComponent" Guid="{C6F6E63D-16D8-4439-BB38-149DFCF3F6B9}">
           <Shortcut
             Id="StartMenuLaunchShortcut"
-            Name="Run read-only inventory"
-            Description="Run DomainBridge read-only inventory"
-            Target="[INSTALLFOLDER]Run-DomainBridgeTestLab.cmd"
+            Name="DomainBridge Console"
+            Description="Open the DomainBridge local console"
+            Target="[INSTALLFOLDER]Run-DomainBridgeConsole.cmd"
             WorkingDirectory="INSTALLFOLDER" />
           <Shortcut
             Id="StartMenuUninstallShortcut"
@@ -48,8 +48,9 @@
     </StandardDirectory>
 
     <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
-      <Files Include="$(var.AgentPublishDir)\**" />
+      <Files Include="$(var.PackagePublishDir)\**" />
       <Files Include="$(var.InstallerSourceDir)\Run-DomainBridgeTestLab.cmd" />
+      <Files Include="$(var.InstallerSourceDir)\Run-DomainBridgeConsole.cmd" />
       <Files Include="$(var.InstallerSourceDir)\README.txt" />
     </ComponentGroup>
 
