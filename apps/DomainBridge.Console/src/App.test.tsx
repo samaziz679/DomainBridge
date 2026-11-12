@@ -1,8 +1,10 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it } from 'vitest'
 import { App } from './App'
 
 describe('App', () => {
+  afterEach(cleanup)
+
   it('renders a read-only operational overview', () => {
     render(
       <App

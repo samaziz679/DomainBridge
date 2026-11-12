@@ -78,9 +78,11 @@ h2 { color: #112144; letter-spacing: -.035em; }
 .pilot-panel { background: linear-gradient(145deg, #f8fbff, #edf5ff); border-color: #d5e6fc; }
 .pilot-panel h2 { margin-bottom: 10px; font-size: 20px; line-height: 1.25; }
 .pilot-panel p:not(.eyebrow) { color: #60769b; font-size: 13px; line-height: 1.6; }
+.maintenance-panel { grid-column: span 2; }
+.policy-tag { display: inline-block; margin: 8px 6px 0 0; padding: 3px 8px; border-radius: 999px; background: #edf5ff; color: #1f5f94; font-size: 11px; font-weight: 700; }
 .locked-state { display: inline-flex; margin-top: 10px; color: #2a6998; font-size: 12px; font-weight: 750; }
 
-@media (max-width: 1050px) { .content-grid { grid-template-columns: 1fr 1fr; } .pilot-panel { grid-column: 1 / -1; } }
+@media (max-width: 1050px) { .content-grid { grid-template-columns: 1fr 1fr; } .pilot-panel, .maintenance-panel { grid-column: 1 / -1; } }
 @media (max-width: 900px) {
   .sidebar { width: 82px; padding: 24px 12px; } .brand > div, .nav-item:not(.active)::after, .nav-item { font-size: 0; } .brand { justify-content: center; } .nav-item { justify-content: center; padding: 13px; } .nav-item span { font-size: 18px; } .sidebar-foot { display: none; } .workspace { width: calc(100% - 82px); padding: 32px 24px; }
 }

@@ -1,6 +1,6 @@
 import brandMark from './assets/domainbridge-mark.svg'
 import './index.css'
-import type { AgentRecord, AuditRecord } from './api'
+import type { AgentRecord, AuditRecord, RemediationRecord } from './api'
 
 export interface DashboardModel {
   apiStatus: 'healthy' | 'unavailable'
@@ -13,11 +13,13 @@ export function App({
   dashboard,
   agents = [],
   audit = [],
+  remediations = [],
   connectionError
 }: {
   dashboard: DashboardModel
   agents?: AgentRecord[]
   audit?: AuditRecord[]
+  remediations?: RemediationRecord[]
   connectionError?: string
 }) {
   const apiIsHealthy = dashboard.apiStatus === 'healthy'
@@ -42,6 +44,9 @@ export function App({
           </a>
           <a className="nav-item" href="#audit">
             <span aria-hidden="true">◷</span> Audit trail
+          </a>
+          <a className="nav-item" href="#maintenance">
+            <span aria-hidden="true">✦</span> Maintenance
           </a>
           <a className="nav-item" href="#pilot">
             <span aria-hidden="true">◇</span> Pilot readiness
@@ -155,6 +160,31 @@ export function App({
                   <div className="event-icon" aria-hidden="true">✓</div>
                   <div><strong>{event.action}</strong><p>{event.subjectId}</p></div>
                   <time>{new Date(event.occurredAtUtc).toLocaleDateString()}</time>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel maintenance-panel" id="maintenance">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">Approved operations</p>
+                <h2>Maintenance catalogue</h2>
+              </div>
+              <span className="panel-count">Read-only</span>
+            </div>
+            <div className="audit-list">
+              {remediations.length === 0 ? (
+                <p className="empty-state">No approved maintenance actions are available.</p>
+              ) : remediations.map(action => (
+                <div className="audit-event" key={action.id}>
+                  <div className="event-icon" aria-hidden="true">✦</div>
+                  <div>
+                    <strong>{action.displayName}</strong>
+                    <p>{action.description}</p>
+                    <span className="policy-tag">{action.requiresApproval ? 'Approval required' : 'Read-only check'}</span>
+                    {action.mayRequireRestart && <span className="policy-tag">May restart</span>}
+                  </div>
                 </div>
               ))}
             </div>
