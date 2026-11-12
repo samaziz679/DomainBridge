@@ -12,6 +12,8 @@ var consoleReadApiEnabled =
     builder.Environment.IsDevelopment() ||
     builder.Environment.IsEnvironment("Testing") ||
     consoleAccess.IsReady();
+var campaignApiEnabled =
+    builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
 
 if (agentTransportRequired)
 {
@@ -41,9 +43,64 @@ else
     builder.Services.AddSingleton<IInventoryStore, InMemoryInventoryStore>();
 }
 
+builder.Services.AddSingleton<IMaintenanceCampaignStore, InMemoryMaintenanceCampaignStore>();
+
 var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+if (campaignApiEnabled)
+{
+    app.MapPost("/api/v1/maintenance/campaigns", (
+        MaintenanceCampaignRequest? request,
+        IMaintenanceCampaignStore campaignStore,
+        IAuditStore auditStore) =>
+    {
+        var remediation = ApprovedRemediationCatalog.Find(request?.RemediationId);
+        var targetDeviceIds = request?.TargetDeviceIds?
+            .Where(deviceId => !string.IsNullOrWhiteSpace(deviceId))
+            .Select(deviceId => deviceId.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? [];
+
+        if (remediation is null || targetDeviceIds.Length == 0 || targetDeviceIds.Length > 1_000)
+        {
+            return Results.BadRequest(new { error = "invalid_maintenance_campaign" });
+        }
+
+        var campaign = campaignStore.Create(remediation.Id, targetDeviceIds);
+        auditStore.Append(new AuditEvent(
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            "maintenance.campaign.created",
+            campaign.CampaignId.ToString()));
+
+        return Results.Created(
+            $"/api/v1/maintenance/campaigns/{campaign.CampaignId}",
+            MaintenanceCampaignResponse.From(campaign, remediation.RequiresApproval));
+    });
+
+    app.MapPost("/api/v1/maintenance/campaigns/{campaignId:guid}/approve", (
+        Guid campaignId,
+        IMaintenanceCampaignStore campaignStore,
+        IAuditStore auditStore) =>
+    {
+        var campaign = campaignStore.Approve(campaignId);
+        if (campaign is null)
+        {
+            return Results.NotFound(new { error = "maintenance_campaign_not_found" });
+        }
+
+        var remediation = ApprovedRemediationCatalog.Find(campaign.RemediationId)!;
+        auditStore.Append(new AuditEvent(
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            "maintenance.campaign.approved",
+            campaign.CampaignId.ToString()));
+
+        return Results.Ok(MaintenanceCampaignResponse.From(campaign, remediation.RequiresApproval));
+    });
+}
 
 if (consoleReadApiEnabled)
 {
@@ -236,6 +293,22 @@ public sealed record InventoryPayload(
         "agentVersion",
         "capturedAtUtc"
     };
+}
+
+public sealed record MaintenanceCampaignRequest(
+    string? RemediationId,
+    IReadOnlyCollection<string>? TargetDeviceIds);
+
+public sealed record MaintenanceCampaignResponse(
+    Guid CampaignId,
+    string Status,
+    bool RequiresApproval)
+{
+    public static MaintenanceCampaignResponse From(MaintenanceCampaign campaign, bool requiresApproval) =>
+        new(
+            campaign.CampaignId,
+            campaign.Status.ToString().ToLowerInvariant(),
+            requiresApproval);
 }
 
 public static class ConsoleQuery
