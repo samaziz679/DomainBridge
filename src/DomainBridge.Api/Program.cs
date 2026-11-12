@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 var consoleAccess = builder.Configuration.GetSection(ConsoleAccessOptions.SectionName).Get<ConsoleAccessOptions>() ?? new();
 var adminActionSecurity = builder.Configuration.GetSection(AdminActionSecurityOptions.SectionName).Get<AdminActionSecurityOptions>() ?? new();
 var trustedPublisherPki = builder.Configuration.GetSection(TrustedPublisherPkiOptions.SectionName).Get<TrustedPublisherPkiOptions>() ?? new();
+var entraAuthentication = builder.Configuration.GetSection(EntraAuthenticationOptions.SectionName).Get<EntraAuthenticationOptions>() ?? new();
 var agentTransportRequired =
     !(builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"));
 var consoleReadApiEnabled =
@@ -50,6 +51,7 @@ builder.Services.AddSingleton<IMaintenanceJobResultStore, InMemoryMaintenanceJob
 builder.Services.AddSingleton(adminActionSecurity);
 builder.Services.AddSingleton(trustedPublisherPki);
 builder.Services.AddSingleton<IPublisherRootCertificateSource, LocalMachinePublisherRootCertificateSource>();
+builder.Services.AddSingleton(entraAuthentication);
 
 var app = builder.Build();
 
