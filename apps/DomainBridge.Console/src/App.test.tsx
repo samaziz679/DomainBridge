@@ -59,4 +59,17 @@ describe('App', () => {
     expect(screen.getByText('Approval required')).toBeTruthy()
     expect(screen.queryByRole('button', { name: /run|execute/i })).toBeNull()
   })
+
+  it('guides an operator to the next safe step without exposing execution controls', () => {
+    render(
+      <App
+        dashboard={{ apiStatus: 'healthy', enrolledAgents: 7, auditEvents: 12, lastAuditAction: 'maintenance.campaign.approved' }}
+      />
+    )
+
+    expect(screen.getByText('Control room')).toBeTruthy()
+    expect(screen.getByRole('status', { name: 'Current operating mode' })).toHaveTextContent('Observation mode')
+    expect(screen.getByRole('link', { name: 'Review maintenance catalogue' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /approve|execute|run/i })).toBeNull()
+  })
 })
