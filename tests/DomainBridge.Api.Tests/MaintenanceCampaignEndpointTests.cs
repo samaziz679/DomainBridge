@@ -49,5 +49,32 @@ public sealed class MaintenanceCampaignEndpointTests : IClassFixture<WebApplicat
         Assert.Equal("approved", approved!.Status);
     }
 
+    [Fact]
+    public async Task Agent_receives_only_approved_maintenance_jobs_for_its_device()
+    {
+        var created = await _client.PostAsJsonAsync("/api/v1/maintenance/campaigns", new
+        {
+            remediationId = "network-diagnostics",
+            targetDeviceIds = new[] { "lab-device-002" }
+        });
+        var campaign = await created.Content.ReadFromJsonAsync<MaintenanceCampaignResponse>();
+        Assert.NotNull(campaign);
+
+        var beforeApproval = await _client.GetAsync("/api/v1/agents/lab-device-002/maintenance-jobs");
+        Assert.Equal(HttpStatusCode.OK, beforeApproval.StatusCode);
+        Assert.Equal("[]", await beforeApproval.Content.ReadAsStringAsync());
+
+        await _client.PostAsync($"/api/v1/maintenance/campaigns/{campaign!.CampaignId}/approve", null);
+
+        var afterApproval = await _client.GetAsync("/api/v1/agents/lab-device-002/maintenance-jobs");
+        Assert.Equal(HttpStatusCode.OK, afterApproval.StatusCode);
+        var jobs = await afterApproval.Content.ReadFromJsonAsync<MaintenanceJobResponse[]>();
+        var job = Assert.Single(jobs!);
+        Assert.Equal("network-diagnostics", job.RemediationId);
+        Assert.Equal(campaign.CampaignId, job.CampaignId);
+    }
+
     public sealed record MaintenanceCampaignResponse(Guid CampaignId, string Status, bool RequiresApproval);
+
+    public sealed record MaintenanceJobResponse(Guid CampaignId, string RemediationId);
 }
