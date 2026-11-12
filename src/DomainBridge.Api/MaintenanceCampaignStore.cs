@@ -58,3 +58,20 @@ public sealed class InMemoryMaintenanceCampaignStore : IMaintenanceCampaignStore
             .OrderBy(campaign => campaign.CreatedAtUtc)
             .ToArray();
 }
+
+public interface IMaintenanceJobResultStore
+{
+    void Append(MaintenanceJobResult result);
+
+    IReadOnlyCollection<MaintenanceJobResult> GetForCampaign(Guid campaignId);
+}
+
+public sealed class InMemoryMaintenanceJobResultStore : IMaintenanceJobResultStore
+{
+    private readonly ConcurrentQueue<MaintenanceJobResult> _results = new();
+
+    public void Append(MaintenanceJobResult result) => _results.Enqueue(result);
+
+    public IReadOnlyCollection<MaintenanceJobResult> GetForCampaign(Guid campaignId) =>
+        _results.Where(result => result.CampaignId == campaignId).ToArray();
+}

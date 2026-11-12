@@ -44,6 +44,7 @@ else
 }
 
 builder.Services.AddSingleton<IMaintenanceCampaignStore, InMemoryMaintenanceCampaignStore>();
+builder.Services.AddSingleton<IMaintenanceJobResultStore, InMemoryMaintenanceJobResultStore>();
 
 var app = builder.Build();
 
@@ -122,6 +123,51 @@ if (campaignApiEnabled)
             });
 
         return Results.Ok(jobs);
+    });
+
+    app.MapPost("/api/v1/maintenance/campaigns/{campaignId:guid}/results", (
+        Guid campaignId,
+        MaintenanceJobResultPayload? payload,
+        IMaintenanceCampaignStore campaignStore,
+        IMaintenanceJobResultStore resultStore,
+        IAuditStore auditStore) =>
+    {
+        var campaign = campaignStore.Find(campaignId);
+        if (campaign is null)
+        {
+            return Results.NotFound(new { error = "maintenance_campaign_not_found" });
+        }
+
+        if (campaign.Status != MaintenanceCampaignStatus.Approved)
+        {
+            return Results.Conflict(new { error = "maintenance_campaign_not_approved" });
+        }
+
+        if (string.IsNullOrWhiteSpace(payload?.DeviceId) ||
+            !campaign.TargetDeviceIds.Contains(payload.DeviceId.Trim(), StringComparer.OrdinalIgnoreCase))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        if (!Enum.TryParse<MaintenanceJobOutcome>(payload.Outcome, ignoreCase: true, out var outcome) ||
+            !Enum.IsDefined(outcome))
+        {
+            return Results.BadRequest(new { error = "invalid_maintenance_job_outcome" });
+        }
+
+        var result = new MaintenanceJobResult(
+            campaign.CampaignId,
+            payload.DeviceId.Trim(),
+            outcome,
+            DateTimeOffset.UtcNow);
+        resultStore.Append(result);
+        auditStore.Append(new AuditEvent(
+            Guid.NewGuid(),
+            result.ReportedAtUtc,
+            $"maintenance.job.{outcome.ToString().ToLowerInvariant()}",
+            result.DeviceId));
+
+        return Results.Accepted($"/api/v1/maintenance/campaigns/{campaign.CampaignId}/results");
     });
 }
 
@@ -333,6 +379,8 @@ public sealed record MaintenanceCampaignResponse(
             campaign.Status.ToString().ToLowerInvariant(),
             requiresApproval);
 }
+
+public sealed record MaintenanceJobResultPayload(string? DeviceId, string? Outcome);
 
 public static class ConsoleQuery
 {

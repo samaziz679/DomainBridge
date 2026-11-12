@@ -26,3 +26,20 @@ public sealed record MaintenanceJob(
     string RemediationId,
     bool RequiresApproval,
     bool MayRequireRestart);
+
+public enum MaintenanceJobOutcome
+{
+    Succeeded = 0,
+    Failed = 1,
+    RebootRequired = 2
+}
+
+/// <summary>
+/// Structured outcome evidence submitted by an agent. Free-form output and logs
+/// are intentionally excluded from the initial transport contract.
+/// </summary>
+public sealed record MaintenanceJobResult(
+    Guid CampaignId,
+    string DeviceId,
+    MaintenanceJobOutcome Outcome,
+    DateTimeOffset ReportedAtUtc);
