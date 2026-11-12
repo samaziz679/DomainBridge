@@ -29,4 +29,6 @@ Do not enable elevated execution until all runtime controls are implemented and 
 
 `PublisherCertificatePolicy` now performs a local, deterministic check of the configured publisher allow-list: the presented certificate must be current, explicitly trusted by thumbprint and carry the `Code Signing` EKU (`1.3.6.1.5.5.7.3.3`).
 
-This is deliberately not a claim that an action package has been signed or that its certificate chain has been validated. A future manifest-verification component must verify the detached CMS signature over the exact manifest bytes and apply the laboratory PKI chain policy before an elevated action can become executable.
+`SignedManifestPolicy` now verifies a detached CMS signature against the exact manifest bytes and then applies `PublisherCertificatePolicy` to the embedded signer certificate. It rejects altered content, attached CMS packages and unknown publishers.
+
+This is deliberately not a claim that the certificate chain has been validated against a laboratory or production PKI. A future chain-policy component must establish the approved trust roots, revocation policy and timestamp policy before an elevated action can become executable.
