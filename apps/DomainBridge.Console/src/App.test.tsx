@@ -37,4 +37,24 @@ describe('App', () => {
     expect(screen.getAllByText('device-001')).toHaveLength(2)
     expect(screen.getByText('agent.inventory.reported')).toBeTruthy()
   })
+
+  it('shows approved maintenance actions as read-only policy information', () => {
+    render(
+      <App
+        dashboard={{ apiStatus: 'healthy', enrolledAgents: 0, auditEvents: 0, lastAuditAction: 'none' }}
+        remediations={[{
+          id: 'windows-update-reset',
+          displayName: 'Réinitialiser les composants Windows Update',
+          description: 'Répare les composants de mise à jour Windows selon une procédure approuvée.',
+          requiresApproval: true,
+          mayRequireRestart: true
+        }]}
+      />
+    )
+
+    expect(screen.getByRole('heading', { name: 'Maintenance catalogue' })).toBeTruthy()
+    expect(screen.getByText('Réinitialiser les composants Windows Update')).toBeTruthy()
+    expect(screen.getByText('Approval required')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /run|execute/i })).toBeNull()
+  })
 })
