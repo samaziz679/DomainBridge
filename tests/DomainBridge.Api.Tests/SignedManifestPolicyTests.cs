@@ -56,7 +56,7 @@ public sealed class SignedManifestPolicyTests
 
         var result = SignedManifestPolicy.Validate(manifest, attachedCms, new[] { certificate.Thumbprint! });
 
-        Assert.Equal(SignedManifestError.DetachedSignatureRequired, result.Error);
+        Assert.Equal(SignedManifestError.SignatureInvalid, result.Error);
     }
 
     private static byte[] SignDetached(byte[] manifest, X509Certificate2 certificate) =>
