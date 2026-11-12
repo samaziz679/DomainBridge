@@ -112,6 +112,9 @@ if (campaignApiEnabled)
         return Results.Ok(MaintenanceCampaignResponse.From(campaign, remediation.RequiresApproval));
     });
 
+    app.MapGet("/api/v1/maintenance/campaigns", (IMaintenanceCampaignStore campaignStore) =>
+        Results.Ok(campaignStore.GetRecent(100).Select(MaintenanceCampaignListItem.From)));
+
     app.MapGet("/api/v1/agents/{deviceId}/maintenance-jobs", (
         string deviceId,
         IMaintenanceCampaignStore campaignStore) =>
@@ -388,6 +391,22 @@ public sealed record MaintenanceCampaignResponse(
             campaign.CampaignId,
             campaign.Status.ToString().ToLowerInvariant(),
             requiresApproval);
+}
+
+public sealed record MaintenanceCampaignListItem(
+    Guid CampaignId,
+    string RemediationId,
+    string Status,
+    int TargetCount,
+    DateTimeOffset CreatedAtUtc)
+{
+    public static MaintenanceCampaignListItem From(MaintenanceCampaign campaign) =>
+        new(
+            campaign.CampaignId,
+            campaign.RemediationId,
+            campaign.Status.ToString().ToLowerInvariant(),
+            campaign.TargetDeviceIds.Count,
+            campaign.CreatedAtUtc);
 }
 
 public sealed record MaintenanceJobResultPayload(string? DeviceId, string? Outcome);

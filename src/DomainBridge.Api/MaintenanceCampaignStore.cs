@@ -9,6 +9,8 @@ public interface IMaintenanceCampaignStore
 
     MaintenanceCampaign? Approve(Guid campaignId);
 
+    IReadOnlyCollection<MaintenanceCampaign> GetRecent(int limit);
+
     IReadOnlyCollection<MaintenanceCampaign> GetApprovedForDevice(string deviceId);
 }
 
@@ -49,6 +51,12 @@ public sealed class InMemoryMaintenanceCampaignStore : IMaintenanceCampaignStore
 
         return null;
     }
+
+    public IReadOnlyCollection<MaintenanceCampaign> GetRecent(int limit) =>
+        _campaigns.Values
+            .OrderByDescending(campaign => campaign.CreatedAtUtc)
+            .Take(limit)
+            .ToArray();
 
     public IReadOnlyCollection<MaintenanceCampaign> GetApprovedForDevice(string deviceId) =>
         _campaigns.Values
