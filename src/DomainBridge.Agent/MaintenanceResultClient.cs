@@ -8,7 +8,16 @@ namespace DomainBridge.Agent;
 /// Sends a normalized maintenance result to the control plane.
 /// Free-form command output is intentionally not part of this transport.
 /// </summary>
-public sealed class MaintenanceResultClient(HttpClient httpClient)
+public interface IMaintenanceResultReporter
+{
+    Task<bool> ReportAsync(
+        Guid campaignId,
+        string deviceId,
+        MaintenanceJobOutcome outcome,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class MaintenanceResultClient(HttpClient httpClient) : IMaintenanceResultReporter
 {
     public async Task<bool> ReportAsync(
         Guid campaignId,
