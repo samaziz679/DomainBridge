@@ -1,0 +1,3 @@
+using System.Windows;
+using System.Windows.Controls;
+namespace DomainBridge.Desktop; public partial class MainWindow : Window { public MainWindow()=>InitializeComponent(); private void Navigation_SelectionChanged(object s, SelectionChangedEventArgs e) { if(Navigation.SelectedItem is not ListBoxItem i)return; var section=i.Content?.ToString()??"Parc"; SectionTitle.Text=section; var locked=section=="Migration"; LockedNotice.Visibility=locked?Visibility.Visible:Visibility.Collapsed; PrimaryMessage.Text=locked?"Aucune migration n’est disponible.":$"{section} — prêt pour la configuration pilote."; SecondaryMessage.Text=locked?"Les opérations de domaine et de profil restent désactivées par conception.":"Les données réelles apparaîtront après l’enrôlement des agents."; } }

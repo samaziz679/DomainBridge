@@ -1,17 +1,29 @@
-# Gates: DomainBridge foundation
+# DomainBridge on-premise desktop delivery gates
 
-OWNS: AGENTS.md, GATES.md, docs/**
+## G1: Windows operator application
 
-Scope: establish the documented, reviewable foundation for secure DomainBridge development.
+Outcome: An installed Windows application opens a native DomainBridge operations workspace without Node.js or a development URL.
 
-- [x] G1: The project scope distinguishes the central console, Windows agent and directory connector.
-  EVIDENCE: 2026-11-11 — reviewed docs/ARCHITECTURE.md component and trust-boundary sections.
+CHECK: dotnet build src/DomainBridge.Desktop/DomainBridge.Desktop.csproj -c Release
+EXPECT: Build succeeded.
 
-- [x] G2: The security baseline prohibits embedded domain credentials and requires auditability, certificate-based agent authentication and least privilege.
-  EVIDENCE: 2026-11-11 — reviewed AGENTS.md and docs/SECURITY_BASELINE.md.
+## G2: Core operations modules
 
-- [x] G3: The deployment design requires one signed agent distributed through both Intune and GPO.
-  EVIDENCE: 2026-11-11 — reviewed docs/ARCHITECTURE.md deployment architecture.
+Outcome: The desktop workspace exposes Parc, Collections, Déploiements, Bibliothèque, Historique, Migration and Paramètres, with migration locked by default.
 
-- [x] G4: ECC Tools has been installed on this repository and its generated PR has been reviewed.
-  EVIDENCE: 2026-11-11 — ECC Tools PR #3 reviewed; changes requested before merge because generated project conventions and MCP baseline were not evidence-based or approved.
+CHECK: dotnet test DomainBridge.sln --no-restore
+EXPECT: Réussi!
+
+## G3: Unified installation
+
+Outcome: The MSI packages the desktop client, local API, agent and all runtime dependencies with start-menu, desktop and uninstall entries.
+
+CHECK: powershell.exe -ExecutionPolicy Bypass -File installer/TestLab/Build-TestLabMsi.ps1 -Configuration Release
+EXPECT: DomainBridge-Agent
+
+## G4: Safety boundary
+
+Outcome: No default desktop flow performs an AD join, profile migration or arbitrary script execution.
+
+CHECK: dotnet test DomainBridge.sln --no-restore
+EXPECT: Réussi!
