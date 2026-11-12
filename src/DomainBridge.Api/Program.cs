@@ -78,6 +78,8 @@ if (consoleReadApiEnabled)
 
         return Results.Ok(auditStore.GetRecent(ConsoleQuery.ResolveLimit(limit)));
     });
+
+    app.MapGet("/api/v1/console/remediations", () => Results.Ok(ApprovedRemediationCatalog.All));
 }
 
 app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore auditStore) =>
