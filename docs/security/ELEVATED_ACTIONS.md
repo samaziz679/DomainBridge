@@ -33,4 +33,4 @@ Do not enable elevated execution until all runtime controls are implemented and 
 
 `PublisherCertificateChainPolicy` now builds the signer chain only against the explicit custom root set supplied by the host. It disables certificate downloads and does not silently use the local Windows trust store.
 
-This chain policy is not yet connected to the signed-manifest validator or an execution endpoint. Its laboratory mode does not perform revocation or timestamp checks. A production integration must supply approved roots, define the CRL/OCSP and timestamp policy, and bind the successful chain result to the accepted manifest before an elevated action can become executable.
+The strict `SignedManifestPolicy` overload combines CMS integrity, publisher allow-list and this explicit chain policy. Callers must provide the custom roots to obtain this stronger verification. It is not yet connected to an execution endpoint. Its laboratory mode does not perform revocation or timestamp checks. A production integration must supply approved roots, define the CRL/OCSP and timestamp policy, and use the strict overload before an elevated action can become executable.
