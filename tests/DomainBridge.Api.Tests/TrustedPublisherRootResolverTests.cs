@@ -11,7 +11,10 @@ public sealed class TrustedPublisherRootResolverTests
     {
         using var configuredRoot = CreateRoot("Configured Root");
         using var otherRoot = CreateRoot("Other Root");
-        var source = new TestRootSource(new X509Certificate2Collection(configuredRoot, otherRoot));
+        var availableRoots = new X509Certificate2Collection();
+        availableRoots.Add(configuredRoot);
+        availableRoots.Add(otherRoot);
+        var source = new TestRootSource(availableRoots);
 
         var result = TrustedPublisherRootResolver.Resolve(
             new TrustedPublisherPkiOptions { TrustedRootThumbprints = [configuredRoot.Thumbprint!] },
