@@ -6,12 +6,17 @@ using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 var consoleAccess = builder.Configuration.GetSection(ConsoleAccessOptions.SectionName).Get<ConsoleAccessOptions>() ?? new();
+var adminActionSecurity = builder.Configuration.GetSection(AdminActionSecurityOptions.SectionName).Get<AdminActionSecurityOptions>() ?? new();
+var trustedPublisherPki = builder.Configuration.GetSection(TrustedPublisherPkiOptions.SectionName).Get<TrustedPublisherPkiOptions>() ?? new();
+var entraAuthentication = builder.Configuration.GetSection(EntraAuthenticationOptions.SectionName).Get<EntraAuthenticationOptions>() ?? new();
 var agentTransportRequired =
     !(builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"));
 var consoleReadApiEnabled =
     builder.Environment.IsDevelopment() ||
     builder.Environment.IsEnvironment("Testing") ||
     consoleAccess.IsReady();
+var campaignApiEnabled =
+    builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
 
 if (agentTransportRequired)
 {
@@ -41,9 +46,137 @@ else
     builder.Services.AddSingleton<IInventoryStore, InMemoryInventoryStore>();
 }
 
+builder.Services.AddSingleton<IMaintenanceCampaignStore, InMemoryMaintenanceCampaignStore>();
+builder.Services.AddSingleton<IMaintenanceJobResultStore, InMemoryMaintenanceJobResultStore>();
+builder.Services.AddSingleton(adminActionSecurity);
+builder.Services.AddSingleton(trustedPublisherPki);
+builder.Services.AddSingleton<IPublisherRootCertificateSource, LocalMachinePublisherRootCertificateSource>();
+builder.Services.AddSingleton(entraAuthentication);
+
 var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+if (campaignApiEnabled)
+{
+    app.MapPost("/api/v1/maintenance/campaigns", (
+        MaintenanceCampaignRequest? request,
+        IMaintenanceCampaignStore campaignStore,
+        IAuditStore auditStore) =>
+    {
+        var remediation = ApprovedRemediationCatalog.Find(request?.RemediationId);
+        var targetDeviceIds = request?.TargetDeviceIds?
+            .Where(deviceId => !string.IsNullOrWhiteSpace(deviceId))
+            .Select(deviceId => deviceId.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? [];
+
+        if (remediation is null || targetDeviceIds.Length == 0 || targetDeviceIds.Length > 1_000)
+        {
+            return Results.BadRequest(new { error = "invalid_maintenance_campaign" });
+        }
+
+        var campaign = campaignStore.Create(remediation.Id, targetDeviceIds);
+        auditStore.Append(new AuditEvent(
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            "maintenance.campaign.created",
+            campaign.CampaignId.ToString()));
+
+        return Results.Created(
+            $"/api/v1/maintenance/campaigns/{campaign.CampaignId}",
+            MaintenanceCampaignResponse.From(campaign, remediation.RequiresApproval));
+    });
+
+    app.MapPost("/api/v1/maintenance/campaigns/{campaignId:guid}/approve", (
+        Guid campaignId,
+        IMaintenanceCampaignStore campaignStore,
+        IAuditStore auditStore) =>
+    {
+        var campaign = campaignStore.Approve(campaignId);
+        if (campaign is null)
+        {
+            return Results.NotFound(new { error = "maintenance_campaign_not_found" });
+        }
+
+        var remediation = ApprovedRemediationCatalog.Find(campaign.RemediationId)!;
+        auditStore.Append(new AuditEvent(
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            "maintenance.campaign.approved",
+            campaign.CampaignId.ToString()));
+
+        return Results.Ok(MaintenanceCampaignResponse.From(campaign, remediation.RequiresApproval));
+    });
+
+    app.MapGet("/api/v1/agents/{deviceId}/maintenance-jobs", (
+        string deviceId,
+        IMaintenanceCampaignStore campaignStore) =>
+    {
+        if (string.IsNullOrWhiteSpace(deviceId))
+        {
+            return Results.BadRequest(new { error = "invalid_device_id" });
+        }
+
+        var jobs = campaignStore.GetApprovedForDevice(deviceId.Trim())
+            .Select(campaign =>
+            {
+                var remediation = ApprovedRemediationCatalog.Find(campaign.RemediationId)!;
+                return new MaintenanceJob(
+                    campaign.CampaignId,
+                    remediation.Id,
+                    remediation.RequiresApproval,
+                    remediation.MayRequireRestart);
+            });
+
+        return Results.Ok(jobs);
+    });
+
+    app.MapPost("/api/v1/maintenance/campaigns/{campaignId:guid}/results", (
+        Guid campaignId,
+        MaintenanceJobResultPayload? payload,
+        IMaintenanceCampaignStore campaignStore,
+        IMaintenanceJobResultStore resultStore,
+        IAuditStore auditStore) =>
+    {
+        var campaign = campaignStore.Find(campaignId);
+        if (campaign is null)
+        {
+            return Results.NotFound(new { error = "maintenance_campaign_not_found" });
+        }
+
+        if (campaign.Status != MaintenanceCampaignStatus.Approved)
+        {
+            return Results.Conflict(new { error = "maintenance_campaign_not_approved" });
+        }
+
+        if (string.IsNullOrWhiteSpace(payload?.DeviceId) ||
+            !campaign.TargetDeviceIds.Contains(payload.DeviceId.Trim(), StringComparer.OrdinalIgnoreCase))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        if (!Enum.TryParse<MaintenanceJobOutcome>(payload.Outcome, ignoreCase: true, out var outcome) ||
+            !Enum.IsDefined(outcome))
+        {
+            return Results.BadRequest(new { error = "invalid_maintenance_job_outcome" });
+        }
+
+        var result = new MaintenanceJobResult(
+            campaign.CampaignId,
+            payload.DeviceId.Trim(),
+            outcome,
+            DateTimeOffset.UtcNow);
+        resultStore.Append(result);
+        auditStore.Append(new AuditEvent(
+            Guid.NewGuid(),
+            result.ReportedAtUtc,
+            $"maintenance.job.{outcome.ToString().ToLowerInvariant()}",
+            result.DeviceId));
+
+        return Results.Accepted($"/api/v1/maintenance/campaigns/{campaign.CampaignId}/results");
+    });
+}
 
 if (consoleReadApiEnabled)
 {
@@ -78,6 +211,8 @@ if (consoleReadApiEnabled)
 
         return Results.Ok(auditStore.GetRecent(ConsoleQuery.ResolveLimit(limit)));
     });
+
+    app.MapGet("/api/v1/console/remediations", () => Results.Ok(ApprovedRemediationCatalog.All));
 }
 
 app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore auditStore) =>
@@ -235,6 +370,24 @@ public sealed record InventoryPayload(
         "capturedAtUtc"
     };
 }
+
+public sealed record MaintenanceCampaignRequest(
+    string? RemediationId,
+    IReadOnlyCollection<string>? TargetDeviceIds);
+
+public sealed record MaintenanceCampaignResponse(
+    Guid CampaignId,
+    string Status,
+    bool RequiresApproval)
+{
+    public static MaintenanceCampaignResponse From(MaintenanceCampaign campaign, bool requiresApproval) =>
+        new(
+            campaign.CampaignId,
+            campaign.Status.ToString().ToLowerInvariant(),
+            requiresApproval);
+}
+
+public sealed record MaintenanceJobResultPayload(string? DeviceId, string? Outcome);
 
 public static class ConsoleQuery
 {
