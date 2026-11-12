@@ -30,8 +30,8 @@ describe('App', () => {
       />
     )
 
-    expect(screen.getByRole('heading', { name: 'Domain migration, under control.' })).toBeTruthy()
-    expect(screen.getByText('Read-only command center')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Calm control for every endpoint.' })).toBeTruthy()
+    expect(screen.getByText('Safe operating posture')).toBeTruthy()
     expect(screen.getByText('API healthy')).toBeTruthy()
     expect(screen.getByText('2')).toBeTruthy()
     expect(screen.getByText('enrolled agents')).toBeTruthy()
@@ -68,7 +68,7 @@ describe('App', () => {
     )
 
     expect(screen.getByText('Control room')).toBeTruthy()
-    expect(screen.getByRole('status', { name: 'Current operating mode' })).toHaveTextContent('Observation mode')
+    expect(screen.getByRole('status', { name: 'Current operating mode' }).textContent).toContain('Observation mode')
     expect(screen.getByRole('link', { name: 'Review maintenance catalogue' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: /approve|execute|run/i })).toBeNull()
   })

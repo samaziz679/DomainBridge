@@ -35,6 +35,8 @@ export function App({
           </div>
         </div>
 
+        <div className="workspace-label">Control room</div>
+
         <nav>
           <a className="nav-item active" href="#overview" aria-current="page">
             <span aria-hidden="true">◈</span> Overview
@@ -63,23 +65,27 @@ export function App({
       <section className="workspace">
         <header className="topbar">
           <div>
-            <p className="eyebrow">Operations workspace</p>
-            <h1>Domain migration, under control.</h1>
+            <p className="eyebrow">DomainBridge · operations workspace</p>
+            <h1>Calm control for every endpoint.</h1>
           </div>
-          <div className="operator-chip">
-            <span className="operator-dot" />
-            Pilot environment
+          <div className="topbar-meta">
+            <span className="operator-chip" role="status" aria-label="Current operating mode">
+              <span className="operator-dot" />
+              Observation mode
+            </span>
+            <span className="environment-chip">Pilot</span>
           </div>
         </header>
 
         <section id="overview" className="hero-card">
           <div>
-            <p className="eyebrow">Read-only command center</p>
-            <h2>Observe every step before you change anything.</h2>
+            <p className="eyebrow">Safe operating posture</p>
+            <h2>See the estate. Understand the change. Then decide.</h2>
             <p>
-              DomainBridge connects inventory, agent health and audit evidence
-              into a single, deliberately non-destructive view.
+              A single, evidence-led workspace for inventory, maintenance and
+              domain migration readiness — with no action hidden behind a click.
             </p>
+            <a className="primary-link" href="#maintenance">Review maintenance catalogue <span aria-hidden="true">→</span></a>
           </div>
           <div className="bridge-visual" aria-hidden="true">
             <span className="bridge-domain">A</span>
@@ -115,6 +121,19 @@ export function App({
             Live control-plane data is unavailable. {connectionError}
           </p>
         )}
+
+        <section className="readiness-strip" aria-label="Safe workflow">
+          <div className="readiness-copy">
+            <span className="step-index">01</span>
+            <div><strong>Review the scope</strong><p>Inventory and approved maintenance policies are ready for review.</p></div>
+          </div>
+          <div className="readiness-divider" aria-hidden="true" />
+          <div className="readiness-copy muted">
+            <span className="step-index">02</span>
+            <div><strong>Approve a campaign</strong><p>Available only when production controls are enabled.</p></div>
+          </div>
+          <span className="readiness-badge">Guardrails active</span>
+        </section>
 
         <section className="content-grid">
           <article className="panel agents-panel" id="agents">
