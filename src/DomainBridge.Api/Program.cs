@@ -100,6 +100,29 @@ if (campaignApiEnabled)
 
         return Results.Ok(MaintenanceCampaignResponse.From(campaign, remediation.RequiresApproval));
     });
+
+    app.MapGet("/api/v1/agents/{deviceId}/maintenance-jobs", (
+        string deviceId,
+        IMaintenanceCampaignStore campaignStore) =>
+    {
+        if (string.IsNullOrWhiteSpace(deviceId))
+        {
+            return Results.BadRequest(new { error = "invalid_device_id" });
+        }
+
+        var jobs = campaignStore.GetApprovedForDevice(deviceId.Trim())
+            .Select(campaign =>
+            {
+                var remediation = ApprovedRemediationCatalog.Find(campaign.RemediationId)!;
+                return new MaintenanceJob(
+                    campaign.CampaignId,
+                    remediation.Id,
+                    remediation.RequiresApproval,
+                    remediation.MayRequireRestart);
+            });
+
+        return Results.Ok(jobs);
+    });
 }
 
 if (consoleReadApiEnabled)

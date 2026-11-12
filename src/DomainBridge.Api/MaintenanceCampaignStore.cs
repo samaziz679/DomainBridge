@@ -8,6 +8,8 @@ public interface IMaintenanceCampaignStore
     MaintenanceCampaign? Find(Guid campaignId);
 
     MaintenanceCampaign? Approve(Guid campaignId);
+
+    IReadOnlyCollection<MaintenanceCampaign> GetApprovedForDevice(string deviceId);
 }
 
 public sealed class InMemoryMaintenanceCampaignStore : IMaintenanceCampaignStore
@@ -47,4 +49,12 @@ public sealed class InMemoryMaintenanceCampaignStore : IMaintenanceCampaignStore
 
         return null;
     }
+
+    public IReadOnlyCollection<MaintenanceCampaign> GetApprovedForDevice(string deviceId) =>
+        _campaigns.Values
+            .Where(campaign =>
+                campaign.Status == MaintenanceCampaignStatus.Approved &&
+                campaign.TargetDeviceIds.Contains(deviceId, StringComparer.OrdinalIgnoreCase))
+            .OrderBy(campaign => campaign.CreatedAtUtc)
+            .ToArray();
 }
