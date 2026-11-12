@@ -7,6 +7,7 @@ using Npgsql;
 var builder = WebApplication.CreateBuilder(args);
 var consoleAccess = builder.Configuration.GetSection(ConsoleAccessOptions.SectionName).Get<ConsoleAccessOptions>() ?? new();
 var adminActionSecurity = builder.Configuration.GetSection(AdminActionSecurityOptions.SectionName).Get<AdminActionSecurityOptions>() ?? new();
+var trustedPublisherPki = builder.Configuration.GetSection(TrustedPublisherPkiOptions.SectionName).Get<TrustedPublisherPkiOptions>() ?? new();
 var agentTransportRequired =
     !(builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"));
 var consoleReadApiEnabled =
@@ -47,6 +48,8 @@ else
 builder.Services.AddSingleton<IMaintenanceCampaignStore, InMemoryMaintenanceCampaignStore>();
 builder.Services.AddSingleton<IMaintenanceJobResultStore, InMemoryMaintenanceJobResultStore>();
 builder.Services.AddSingleton(adminActionSecurity);
+builder.Services.AddSingleton(trustedPublisherPki);
+builder.Services.AddSingleton<IPublisherRootCertificateSource, LocalMachinePublisherRootCertificateSource>();
 
 var app = builder.Build();
 

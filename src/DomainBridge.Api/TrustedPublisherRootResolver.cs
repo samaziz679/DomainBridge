@@ -5,6 +5,10 @@ public sealed class TrustedPublisherPkiOptions
     public const string SectionName = "TrustedPublisherPki";
 
     public string[] TrustedRootThumbprints { get; init; } = [];
+
+    public bool IsReady() => TrustedRootThumbprints
+        .Select(TrustedPublisherRootResolver.Normalize)
+        .Any(value => value.Length is 40 or 64 && value.All(Uri.IsHexDigit));
 }
 
 public interface IPublisherRootCertificateSource
@@ -53,7 +57,7 @@ public static class TrustedPublisherRootResolver
         return TrustedPublisherRootResolutionResult.Success(new X509Certificate2Collection(roots));
     }
 
-    private static string Normalize(string? value) =>
+    public static string Normalize(string? value) =>
         value?.Replace(" ", string.Empty, StringComparison.Ordinal).Trim() ?? string.Empty;
 }
 
