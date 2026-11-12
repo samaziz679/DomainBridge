@@ -29,6 +29,12 @@
           "Microsoft.TestPlatform.TestHost": "17.11.1"
         }
       },
+      "System.Security.Cryptography.Pkcs": {
+        "type": "Direct",
+        "requested": "[8.*, )",
+        "resolved": "8.0.2",
+        "contentHash": "VWACYq0JGxi9sw3TonSSV4B2MfhYk5nhgOtp9wbrt5NFOtUetFqHkMZylcCwPX+117cBJH5EnIzIy6X4OKn/kA=="
+      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.9.2, )",
@@ -437,7 +443,8 @@
         "type": "Project",
         "dependencies": {
           "DomainBridge.Contracts": "[1.0.0, )",
-          "Npgsql": "[10.0.3, )"
+          "Npgsql": "[10.0.3, )",
+          "System.Security.Cryptography.Pkcs": "[8.*, )"
         }
       },
       "domainbridge.contracts": {
