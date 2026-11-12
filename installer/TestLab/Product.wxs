@@ -2,7 +2,7 @@
   <Package
     Name="DomainBridge Test Lab"
     Manufacturer="DomainBridge"
-    Version="0.2.3"
+    Version="0.2.4"
     UpgradeCode="{C34D1D52-7EC4-48A4-9BDB-9315B0C1AC08}"
     Language="1033"
     Scope="perMachine">

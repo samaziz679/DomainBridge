@@ -79,7 +79,9 @@ public partial class MainWindow : Window
         var apiPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "Console", "DomainBridge.Api.exe"));
         if (apiLaunchAttempted || !File.Exists(apiPath)) return false;
         apiLaunchAttempted = true;
-        Process.Start(new ProcessStartInfo(apiPath, "--urls http://127.0.0.1:5080") { UseShellExecute = false, CreateNoWindow = true });
+        var startInfo = new ProcessStartInfo(apiPath, "--urls http://127.0.0.1:5080") { UseShellExecute = false, CreateNoWindow = true };
+        startInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
+        Process.Start(startInfo);
         return true;
     }
 

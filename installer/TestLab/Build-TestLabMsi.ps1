@@ -14,7 +14,7 @@ $apiProject = Join-Path $repositoryRoot 'src\DomainBridge.Api\DomainBridge.Api.c
 $desktopProject = Join-Path $repositoryRoot 'src\DomainBridge.Desktop\DomainBridge.Desktop.csproj'
 $consoleRoot = Join-Path $repositoryRoot 'apps\DomainBridge.Console'
 $sourceFile = Join-Path $PSScriptRoot 'Product.wxs'
-$msiPath = Join-Path $outputRoot 'DomainBridge-TestLab-0.2.3.msi'
+$msiPath = Join-Path $outputRoot 'DomainBridge-TestLab-0.2.4.msi'
 
 Remove-Item -LiteralPath $publishRoot -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $publishRoot, $outputRoot -Force | Out-Null
