@@ -1,7 +1,7 @@
 # DomainBridge — périmètre produit v2
 
 - Version : 2.0 — 2026-11-13 (remplace « objectif produit recadré »)
-- Statut : **proposition à valider**. Les points marqués *(à décider)* renvoient aux décisions D1–D7 de `docs/audit/2026-11-13-audit-domainbridge.md`.
+- Statut : **validé** le 2026-11-13. Décisions de cadrage : `docs/adr/ADR-003-decisions-de-cadrage.md`.
 
 ## Vision
 
@@ -9,7 +9,7 @@ DomainBridge bascule, de manière centralisée, des postes Windows du **domaine 
 
 ## Hypothèse d'entrée
 
-La migration des objets d'annuaire est **terminée avant toute campagne** : utilisateurs, comptes ordinateurs, groupes de sécurité, OU et GPO existent dans B. DomainBridge ne crée, ne migre et ne modifie aucun de ces objets, à une exception près : la réinitialisation du compte ordinateur cible nécessaire à la jonction (et du compte source pour un retour arrière *(à décider, D3)*).
+La migration des objets d'annuaire est **terminée avant toute campagne** : utilisateurs, comptes ordinateurs, groupes de sécurité, OU et GPO existent dans B. DomainBridge ne crée, ne migre et ne modifie aucun de ces objets, à une exception près : la réinitialisation du compte ordinateur cible nécessaire à la jonction et celle du compte ordinateur source pour un retour arrière, par droit délégué sur une OU précise de A.
 
 ## Entrée : la liste de migration
 
@@ -17,8 +17,7 @@ Fichier CSV importé dans la console, une ligne par poste :
 
 | Colonne | Obligatoire | Rôle |
 |---|---|---|
-| `poste_source` | oui | Nom du poste dans A |
-| `poste_cible` | non | Nom dans B si différent *(D2)* |
+| `poste` | oui | Nom du poste, identique dans A et dans B |
 | `dernier_utilisateur` | oui | Compte A du dernier utilisateur connecté (`A\login`) : profil principal candidat |
 | `utilisateur_cible` | non | Compte B si le login change ; par défaut même login |
 | `vague` | non | Affectation à une vague |
@@ -39,7 +38,7 @@ La liste est un **point de départ, pas une vérité** : la console la rapproche
 
 ### 3. Précontrôles et simulation
 - Verdict par poste : **prêt**, **prêt avec réserves**, **bloqué**, avec motif normalisé.
-- Visibilité d'un contrôleur de domaine B et résolution DNS depuis le poste *(D1)*.
+- Visibilité d'un contrôleur de domaine B et résolution DNS depuis le poste (acquise en principe, vérifiée poste par poste).
 - Simulation complète sans modification, obligatoire avant toute vague réelle.
 
 ### 4. Campagnes et vagues
@@ -59,7 +58,7 @@ La liste est un **point de départ, pas une vérité** : la console la rapproche
 
 ### 7. Retour arrière
 - Avant bascule : annulation complète et automatique.
-- Après bascule : retour dans A piloté par l'agent si la validation échoue dans le délai configuré, ou sur demande d'un opérateur *(modalité selon D3)*.
+- Après bascule : retour dans A piloté par l'agent si la validation échoue dans le délai configuré, ou sur demande d'un opérateur.
 - Chaque étape destructive a un chemin de retour testé en laboratoire avant d'être autorisée en pilote.
 
 ### 8. Preuve et reporting
@@ -90,7 +89,7 @@ Intune et la GPO **livrent** l'agent ; la console **pilote** la migration. Aucun
 | Réseau dépendant d'un certificat machine de A (802.1X) | Bloqué tant que l'équivalent B n'est pas en place |
 | Poste hybride Entra / géré par Intune | Vague dédiée, après validation en laboratoire du changement d'identité d'appareil |
 | Dernier utilisateur = compte d'administration ou de service | Quarantaine |
-| Serveurs, contrôleurs de domaine | Refusés |
+| Serveurs, contrôleurs de domaine, Windows antérieur à Windows 10 | Refusés |
 
 ## Limites connues, à communiquer aux utilisateurs
 
@@ -117,13 +116,14 @@ Ne suivent **pas** le profil, par conception (ce sont des secrets liés à l'anc
 | Technicien | Lever une quarantaine, traiter une exception, demander un retour arrière |
 | Lecteur (support, audit) | Consulter états et preuves |
 
-## Choix structurants *(à confirmer)*
+## Choix structurants
 
-| Sujet | Proposition | Alternatives écartées |
+| Sujet | Décision | Alternatives écartées |
 |---|---|---|
 | Changement de domaine | Jonction hors ligne, jeton chiffré par poste, connecteur B sous gMSA délégué | Compte de jonction avec mot de passe sur le poste : contraire aux règles de sécurité |
-| Profil *(D5)* | Moteur natif dans l'agent, sur API Windows documentées, sans rétro-ingénierie d'outil tiers | ProfWiz : licence par poste et boîte noire difficile à auditer. USMT : copie complète, lent, double l'espace disque |
-| Console *(D4)* | Web unique servie par l'API, Entra ID + rôles | Client WPF local : mono-opérateur, incompatible avec la double approbation |
+| Profil | Moteur natif dans l'agent, sur API Windows documentées, sans rétro-ingénierie d'outil tiers | ProfWiz : licence par poste et boîte noire difficile à auditer. USMT : copie complète, lent, double l'espace disque |
+| Console | Web unique servie par l'API, Entra ID + rôles | Client WPF local : mono-opérateur, incompatible avec la double approbation |
+| Hébergement | Serveur interne, joignable en HTTPS par les postes | Cloud : non retenu |
 | Socle | .NET 10 LTS (API, agent, connecteurs), PostgreSQL, React | Rester sur .NET 8 : hors support depuis le 10/11/2026 |
 
 ## Mesures de succès

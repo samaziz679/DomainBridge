@@ -104,6 +104,8 @@ Le rattachement « sur place » (sans copie) consiste à donner au compte B les 
 
 ## 6. Décisions à prendre (par ordre d'impact)
 
+> Toutes tranchées le 2026-11-13 : voir `docs/adr/ADR-003-decisions-de-cadrage.md`.
+
 | # | Question | Ce que la réponse change |
 |---|---|---|
 | D1 | Les postes voient-ils déjà les contrôleurs de domaine B (routage, DNS) ? Existe-t-il une relation d'approbation A ↔ B ? | Faisabilité de la première ouverture de session, méthode de résolution des comptes, classe d'exception « nomades » |

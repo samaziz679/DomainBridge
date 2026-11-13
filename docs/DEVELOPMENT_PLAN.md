@@ -1,7 +1,7 @@
 # DomainBridge — plan de développement automatisé de bout en bout
 
 - Version : 2.0 — 2026-11-13
-- Statut : **proposition à valider**. Références : `docs/PRODUCT_BRIEF.md` (périmètre v2), `docs/audit/2026-11-13-audit-domainbridge.md` (constats S*, P*, décisions D*).
+- Statut : **validé** le 2026-11-13. Décisions de cadrage : `docs/adr/ADR-003-decisions-de-cadrage.md`. Références : `docs/PRODUCT_BRIEF.md` (périmètre v2), `docs/audit/2026-11-13-audit-domainbridge.md` (constats S*, P*, décisions D*).
 
 ## 1. Principe
 
@@ -38,7 +38,7 @@ Construit et détruit par script (`lab/Build-Lab.ps1`, module AutomatedLab sur H
 
 - forêt `lab-a.test` et forêt `lab-b.test`, un contrôleur de domaine chacune, réseau isolé ;
 - un serveur DomainBridge (API, PostgreSQL, connecteurs, autorité de certification de test) ;
-- postes clients : une image par version de Windows visée *(D6)* ;
+- postes clients : une image Windows 10 22H2 et une image Windows 11 ;
 - identités 100 % synthétiques, générées par script ; comptes ordinateurs et utilisateurs pré-créés dans B pour reproduire l'hypothèse d'entrée ;
 - point de contrôle Hyper-V restauré avant chaque scénario : résultats reproductibles.
 
@@ -67,7 +67,7 @@ Chaque phase se termine par un jalon vérifiable. Les phases 0 à 3 ne modifient
 
 | Tranche | Contenu | Jalon |
 |---|---|---|
-| 0.1 | Réponses aux décisions D1–D7 ; mise à jour de l'ADR-001 et ajout des ADR jonction, profil, console | ADR acceptés |
+| 0.1 | Décisions D1–D7 prises (ADR-003) ; reste : OU de délégation dans A et B, mise à jour de l'ADR-001 | ADR acceptés |
 | 0.2 | Gel du hors-périmètre : retrait du catalogue de remédiations, des actions technicien, de la PKI d'éditeur ; gel de `DomainBridge.Desktop` | Tests verts, plus aucune référence « maintenance » exposée |
 | 0.3 | Passage à .NET 10 LTS, `scripts/verify.ps1`, CI durcie, propriétaires de code, remise à plat de `GATES.md` et du README | CI verte sur la nouvelle base |
 | 0.4 | Modèle de menace écrit (agent, API, connecteurs, jeton de jonction) | Revue de sécurité signée |
@@ -132,7 +132,7 @@ Jalon : matrice E1–E12 verte trois nuits consécutives sur chaque version de W
 | 5.1 | Vagues, fenêtres de maintenance, plafond de simultanéité |
 | 5.2 | Double approbation, arrêt d'urgence, seuil d'arrêt automatique |
 | 5.3 | Tableau de bord de vague, fiche de preuve par poste, exports |
-| 5.4 | Essai de charge : agents simulés au volume cible *(D6)* |
+| 5.4 | Essai de charge : 1 000 agents simulés |
 
 Jalon : une vague de laboratoire complète, approuvée par deux identités distinctes, avec un échec provoqué ramené à l'état initial.
 
@@ -178,4 +178,4 @@ Vagues de taille croissante, revue après chaque vague, traitement des classes d
 
 ## 7. Prochaine action
 
-Répondre aux décisions D1–D7 (audit, section 6). Dès validation de ce plan et du périmètre v2, la phase 0 démarre par les tranches 0.2 et 0.3, qui ne dépendent d'aucune de ces réponses.
+Démarrer la phase 0 par les tranches 0.2 (retrait du hors-périmètre, dont `DomainBridge.Desktop`) et 0.3 (.NET 10, vérification unique, CI durcie).
