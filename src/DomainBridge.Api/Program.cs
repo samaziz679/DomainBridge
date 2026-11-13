@@ -2,6 +2,7 @@ using System.Text.Json;
 using DomainBridge.Contracts;
 using System.Net.Security;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -43,8 +44,39 @@ else
 }
 
 builder.Services.AddSingleton(entraAuthentication);
+builder.Services.Configure<AgentIdentityOptions>(builder.Configuration.GetSection(AgentIdentityOptions.SectionName));
+builder.Services.AddSingleton<IAgentIssuerChainReader>(_ => new X509AgentIssuerChainReader());
 
 var app = builder.Build();
+
+var agentIdentity = app.Services.GetRequiredService<IOptions<AgentIdentityOptions>>().Value;
+if (agentTransportRequired && agentIdentity.NormalizedIssuerThumbprints().Count == 0)
+{
+    throw new InvalidOperationException(
+        "AgentIdentity:TrustedIssuerThumbprints must pin at least one issuing authority outside development and test.");
+}
+
+var agentIdentityRequired = agentTransportRequired || agentIdentity.Enforce;
+
+AgentIdentityResult ResolveAgent(HttpRequest request, IAgentIssuerChainReader chainReader) =>
+    AgentIdentityResolver.Resolve(
+        request.HttpContext.Connection.ClientCertificate,
+        agentIdentityRequired,
+        agentIdentity,
+        chainReader);
+
+IResult RejectIdentityMismatch(IAuditStore auditStore, AgentIdentityResult caller, string claimedDeviceId)
+{
+    auditStore.Append(new AuditEvent(
+        Guid.NewGuid(),
+        DateTimeOffset.UtcNow,
+        "agent.identity.rejected",
+        claimedDeviceId,
+        AuditActors.Agent(caller.DeviceId),
+        AuditOutcomes.Denied));
+
+    return Results.Json(new { error = "agent_identity_mismatch" }, statusCode: StatusCodes.Status403Forbidden);
+}
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -87,12 +119,10 @@ if (consoleReadApiEnabled)
 
 }
 
-app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore auditStore) =>
+app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore auditStore, IAgentIssuerChainReader chainReader) =>
 {
-    var transportValidation = AgentTransportSecurity.Validate(
-        request.HttpContext.Connection.ClientCertificate,
-        agentTransportRequired);
-    if (!transportValidation.IsSuccess)
+    var caller = ResolveAgent(request, chainReader);
+    if (!caller.IsSuccess)
     {
         return Results.Unauthorized();
     }
@@ -130,11 +160,20 @@ app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore audit
             return Results.BadRequest(new { error = enrollment.Error.ToString() });
         }
 
+        // The caller is whoever the certificate says it is; the body cannot claim otherwise.
+        if (!caller.IsAnonymous &&
+            (!string.Equals(enrollment.Value!.AgentId, caller.DeviceId, StringComparison.OrdinalIgnoreCase) ||
+             !string.Equals(enrollment.Value.CertificateThumbprint, caller.Thumbprint, StringComparison.OrdinalIgnoreCase)))
+        {
+            return RejectIdentityMismatch(auditStore, caller, enrollment.Value.AgentId);
+        }
+
         auditStore.Append(new AuditEvent(
             Guid.NewGuid(),
             DateTimeOffset.UtcNow,
             "agent.enrolled",
-            enrollment.Value!.AgentId));
+            enrollment.Value!.AgentId,
+            AuditActors.Agent(caller.DeviceId)));
 
         return Results.Ok(new EnrollmentResponse(
             enrollment.Value!.AgentId,
@@ -143,12 +182,10 @@ app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore audit
     }
 });
 
-app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditStore, IInventoryStore inventoryStore) =>
+app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditStore, IInventoryStore inventoryStore, IAgentIssuerChainReader chainReader) =>
 {
-    var transportValidation = AgentTransportSecurity.Validate(
-        request.HttpContext.Connection.ClientCertificate,
-        agentTransportRequired);
-    if (!transportValidation.IsSuccess)
+    var caller = ResolveAgent(request, chainReader);
+    if (!caller.IsSuccess)
     {
         return Results.Unauthorized();
     }
@@ -187,6 +224,12 @@ app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditSt
             return Results.BadRequest(new { error = "invalid_inventory_metadata" });
         }
 
+        if (!caller.IsAnonymous &&
+            !string.Equals(payload.DeviceId.Trim(), caller.DeviceId, StringComparison.OrdinalIgnoreCase))
+        {
+            return RejectIdentityMismatch(auditStore, caller, payload.DeviceId.Trim());
+        }
+
         var inventory = new DeviceInventoryReport(
             payload.DeviceId.Trim(),
             payload.OperatingSystem.Trim(),
@@ -200,7 +243,8 @@ app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditSt
             Guid.NewGuid(),
             DateTimeOffset.UtcNow,
             "agent.inventory.reported",
-            inventory.DeviceId));
+            inventory.DeviceId,
+            AuditActors.Agent(caller.DeviceId)));
 
         return Results.Accepted($"/api/v1/inventory/{inventory.DeviceId}");
     }

@@ -40,3 +40,21 @@ Décision : `docs/adr/ADR-004-poste-admin-et-poste-de-reserve.md`. Protocole : `
 - [ ] **1.3 — Rattachement du profil sur place.** Protocole écrit ; script à écrire au vu des résultats de 1.2.
 
 - [ ] **1.4 — Retour dans A.** Protocole écrit.
+
+## Phase 2 — Socle de confiance
+
+- [ ] **2.1 — Authentification et rôles des opérateurs.** Non commencé : dépend du choix du mode d'authentification sur un poste d'administrateur.
+
+- [x] **2.2 — Identité d'agent liée au certificat** (constats S3 et S4, menace T1).
+  CHECK : `dotnet test DomainBridge.sln -c Release --filter "AgentIdentity"`
+  PREUVE : 2026-11-13 — 15 tests : identité lue dans le certificat, autorité épinglée, certificat auto-signé refusé, usurpation d'un autre poste refusée en 403 et tracée, démarrage refusé en production sans autorité épinglée.
+  RESTE : procédure d'enrôlement (menace T2) et contrôle de révocation.
+
+- [ ] **2.3 — Audit complet et chaîné** (constats S5 et S7, menace T22).
+  CHECK : `dotnet test DomainBridge.sln -c Release --filter "AuditChain"`
+  PREUVE PARTIELLE : 2026-11-13 — acteur, résultat et tâche dans chaque événement ; chaînage par empreinte ; modification, suppression et réordonnancement détectés (9 tests).
+  RESTE : la migration `deployment/postgres/003_audit_chain.sql` et le magasin PostgreSQL ne sont **pas exécutés** (aucune base disponible) ; export SIEM ; acteur humain, qui dépend de 2.1.
+
+- [ ] **2.4 — Persistance de tout l'état.** Non commencé : choix du stockage à confirmer (ADR-004).
+- [ ] **2.5 — Agent en service Windows.** Non commencé.
+- [ ] **2.6 — MSI unique signé.** Non commencé.

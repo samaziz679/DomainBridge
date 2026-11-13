@@ -18,6 +18,8 @@ export interface AuditRecord {
   occurredAtUtc: string
   action: string
   subjectId: string
+  actor?: string
+  outcome?: string
 }
 
 export interface ConsoleData {
