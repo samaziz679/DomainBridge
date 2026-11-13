@@ -1,8 +1,10 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it } from 'vitest'
 import { App } from './App'
 
 describe('App', () => {
+  afterEach(cleanup)
+
   it('renders a read-only operational overview', () => {
     render(
       <App
@@ -28,13 +30,46 @@ describe('App', () => {
       />
     )
 
-    expect(screen.getByRole('heading', { name: 'Domain migration, under control.' })).toBeTruthy()
-    expect(screen.getByText('Read-only command center')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Calm control for every endpoint.' })).toBeTruthy()
+    expect(screen.getByText('Safe operating posture')).toBeTruthy()
     expect(screen.getByText('API healthy')).toBeTruthy()
     expect(screen.getByText('2')).toBeTruthy()
     expect(screen.getByText('enrolled agents')).toBeTruthy()
     expect(screen.getByText('No migration action is available in this console.')).toBeTruthy()
     expect(screen.getAllByText('device-001')).toHaveLength(2)
     expect(screen.getByText('agent.inventory.reported')).toBeTruthy()
+  })
+
+  it('shows approved maintenance actions as read-only policy information', () => {
+    render(
+      <App
+        dashboard={{ apiStatus: 'healthy', enrolledAgents: 0, auditEvents: 0, lastAuditAction: 'none' }}
+        remediations={[{
+          id: 'windows-update-reset',
+          displayName: 'Réinitialiser les composants Windows Update',
+          description: 'Répare les composants de mise à jour Windows selon une procédure approuvée.',
+          requiresApproval: true,
+          mayRequireRestart: true
+        }]}
+      />
+    )
+
+    expect(screen.getByRole('heading', { name: 'Maintenance catalogue' })).toBeTruthy()
+    expect(screen.getByText('Réinitialiser les composants Windows Update')).toBeTruthy()
+    expect(screen.getByText('Approval required')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /run|execute/i })).toBeNull()
+  })
+
+  it('guides an operator to the next safe step without exposing execution controls', () => {
+    render(
+      <App
+        dashboard={{ apiStatus: 'healthy', enrolledAgents: 7, auditEvents: 12, lastAuditAction: 'maintenance.campaign.approved' }}
+      />
+    )
+
+    expect(screen.getByText('Control room')).toBeTruthy()
+    expect(screen.getByRole('status', { name: 'Current operating mode' }).textContent).toContain('Observation mode')
+    expect(screen.getByRole('link', { name: 'Review maintenance catalogue' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /approve|execute|run/i })).toBeNull()
   })
 })

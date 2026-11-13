@@ -2,7 +2,7 @@
   <Package
     Name="DomainBridge Test Lab"
     Manufacturer="DomainBridge"
-    Version="0.2.0"
+    Version="0.2.6"
     UpgradeCode="{C34D1D52-7EC4-48A4-9BDB-9315B0C1AC08}"
     Language="1033"
     Scope="perMachine">
@@ -14,14 +14,50 @@
       <Directory Id="INSTALLFOLDER" Name="DomainBridge Test Lab" />
     </StandardDirectory>
 
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcutComponent" Guid="{DA8BBA3D-925D-4D91-B79A-04564F5AF204}">
+        <Shortcut
+          Id="DesktopShortcut"
+          Name="DomainBridge"
+          Description="Open DomainBridge Operations"
+          Target="[INSTALLFOLDER]Desktop\DomainBridge.Desktop.exe"
+          WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKLM" Key="Software\DomainBridge\TestLab" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="DomainBridgeStartMenu" Name="DomainBridge Test Lab">
+        <Component Id="StartMenuShortcutComponent" Guid="{C6F6E63D-16D8-4439-BB38-149DFCF3F6B9}">
+          <Shortcut
+            Id="StartMenuLaunchShortcut"
+            Name="DomainBridge Operations"
+            Description="Open DomainBridge Operations"
+            Target="[INSTALLFOLDER]Desktop\DomainBridge.Desktop.exe"
+            WorkingDirectory="INSTALLFOLDER" />
+          <Shortcut
+            Id="StartMenuUninstallShortcut"
+            Name="Uninstall DomainBridge Test Lab"
+            Description="Remove DomainBridge Test Lab"
+            Target="[System64Folder]msiexec.exe"
+            Arguments="/x [ProductCode]" />
+          <RemoveFolder Id="RemoveDomainBridgeStartMenu" On="uninstall" />
+          <RegistryValue Root="HKLM" Key="Software\DomainBridge\TestLab" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
     <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
-      <Files Include="$(var.AgentPublishDir)\**" />
+      <Files Include="$(var.PackagePublishDir)\**" />
       <Files Include="$(var.InstallerSourceDir)\Run-DomainBridgeTestLab.cmd" />
+      <Files Include="$(var.InstallerSourceDir)\Run-DomainBridgeConsole.cmd" />
       <Files Include="$(var.InstallerSourceDir)\README.txt" />
     </ComponentGroup>
 
     <Feature Id="MainFeature" Title="DomainBridge Test Lab" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
+      <ComponentRef Id="DesktopShortcutComponent" />
+      <ComponentRef Id="StartMenuShortcutComponent" />
     </Feature>
   </Package>
 </Wix>

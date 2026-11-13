@@ -20,10 +20,19 @@ export interface AuditRecord {
   subjectId: string
 }
 
+export interface RemediationRecord {
+  id: string
+  displayName: string
+  description: string
+  requiresApproval: boolean
+  mayRequireRestart: boolean
+}
+
 export interface ConsoleData {
   overview: Overview
   agents: AgentRecord[]
   audit: AuditRecord[]
+  remediations: RemediationRecord[]
 }
 
 type Fetcher = typeof fetch
@@ -43,11 +52,12 @@ async function readJson<T>(fetcher: Fetcher, url: string): Promise<T> {
 
 export async function loadConsoleData(apiBaseUrl: string, fetcher: Fetcher = fetch): Promise<ConsoleData> {
   const baseUrl = apiBaseUrl.replace(/\/$/, '')
-  const [overview, agents, audit] = await Promise.all([
+  const [overview, agents, audit, remediations] = await Promise.all([
     readJson<Overview>(fetcher, `${baseUrl}/api/v1/console/overview`),
     readJson<AgentRecord[]>(fetcher, `${baseUrl}/api/v1/console/agents?limit=25`),
-    readJson<AuditRecord[]>(fetcher, `${baseUrl}/api/v1/console/audit?limit=25`)
+    readJson<AuditRecord[]>(fetcher, `${baseUrl}/api/v1/console/audit?limit=25`),
+    readJson<RemediationRecord[]>(fetcher, `${baseUrl}/api/v1/console/remediations`)
   ])
 
-  return { overview, agents, audit }
+  return { overview, agents, audit, remediations }
 }
