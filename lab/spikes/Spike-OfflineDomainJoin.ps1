@@ -109,7 +109,7 @@ foreach ($iteration in 1..$Iterations) {
             PartOfDomain    = $system.PartOfDomain
             SecureChannel   = $secureChannel
             LogonServer     = (nltest.exe /dsgetdc:lab-b.test 2>&1 | Select-String 'DC:' | Out-String).Trim()
-            LocalAdminGroup = @(Get-LocalGroupMember -Group 'Administrators' -ErrorAction SilentlyContinue | ForEach-Object Name)
+            LocalAdminGroup = @(Get-LocalGroupMember -SID 'S-1-5-32-544' -ErrorAction SilentlyContinue | ForEach-Object Name)
         }
     }
 
