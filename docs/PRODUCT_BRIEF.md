@@ -67,8 +67,18 @@ La liste est un **point de départ, pas une vérité** : la console la rapproche
 - Fiche de preuve par poste (état avant, étapes, état après), tableau de bord de vague, export CSV et SIEM.
 
 ### 9. Distribution de l'agent
-- Un seul service Windows signé, un seul MSI, livré par Intune et par GPO avec les mêmes règles de version, de détection et de mise à jour.
-- Désinstallation automatique de l'agent en fin de projet.
+Intune et la GPO **livrent** l'agent ; la console **pilote** la migration. Aucune étape de migration n'est exécutée par un script Intune ou GPO (voir `docs/adr/ADR-002-distribution-agent.md`).
+
+| Situation du poste | Voie de livraison de l'agent |
+|---|---|
+| Géré par Intune (majorité du parc) | Application Win32 Intune : le MSI emballé, installation en contexte système, règle de détection sur la version |
+| Membre de A, hors Intune | GPO : même MSI, installation assignée à l'ordinateur ou script de démarrage signé, ciblée sur les OU concernées |
+| Nomade ne recevant plus les GPO | Installation manuelle du même MSI par un technicien, ou classement en exception |
+
+- Un seul service Windows signé, un seul MSI, mêmes règles de version, de détection et de mise à jour quelle que soit la voie.
+- La console compare la liste de migration aux agents enrôlés et signale tout poste sans agent : aucun poste n'est oublié en silence, et aucun ne peut entrer dans une vague sans agent actif.
+- Le canal de l'agent (HTTPS sortant, certificat propre) ne dépend ni d'Intune ni du domaine : il reste disponible pendant et après la bascule, y compris si le poste change d'identité d'appareil dans Intune.
+- Désinstallation automatique de l'agent en fin de projet, par la même voie que l'installation.
 
 ## Classes d'exception (traitées, mais jamais automatiquement)
 
