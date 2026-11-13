@@ -18,6 +18,8 @@ Un jalon n'est coché qu'avec une commande rejouable et une preuve datée. Plan 
   RESTE : exécution de la CI sur GitHub non encore observée (rien n'est poussé).
 
 - [ ] **0.4 — Modèle de menace écrit et relu.**
+  PREUVE PARTIELLE : 2026-11-13 — `docs/security/THREAT_MODEL.md` rédigé (31 menaces, 10 exigences vérifiables).
+  RESTE : relecture et validation par l'équipe sécurité ; le jalon n'est coché qu'après cette relecture.
 
 ## Écarts connus, à ne pas perdre de vue
 

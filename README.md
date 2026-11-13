@@ -19,6 +19,7 @@ Le dépôt contient le socle de contrôle : enrôlement et inventaire technique 
 | [docs/audit/2026-11-13-audit-domainbridge.md](docs/audit/2026-11-13-audit-domainbridge.md) | Audit de l'existant et constats de sécurité ouverts |
 | [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | Plan de développement par phases |
 | [docs/adr/](docs/adr/) | Décisions d'architecture |
+| [docs/security/THREAT_MODEL.md](docs/security/THREAT_MODEL.md) | Modèle de menace et exigences de sécurité vérifiables |
 | [GATES.md](GATES.md) | Jalons et preuves |
 | [AGENTS.md](AGENTS.md) | Règles de sécurité obligatoires |
 
