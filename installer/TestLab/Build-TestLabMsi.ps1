@@ -30,6 +30,9 @@ dotnet publish $apiProject --configuration $Configuration --runtime win-x64 --se
 if ($LASTEXITCODE -ne 0) { throw "API publish failed with exit code $LASTEXITCODE." }
 Copy-Item -Path (Join-Path $consoleRoot 'dist\*') -Destination (Join-Path $publishRoot 'Console\wwwroot') -Recurse -Force
 
+dotnet tool restore
+if ($LASTEXITCODE -ne 0) { throw "Tool restore failed with exit code $LASTEXITCODE." }
+
 dotnet tool run wix build -arch x64 -d PackagePublishDir=$publishRoot -d InstallerSourceDir=$PSScriptRoot -o $msiPath $sourceFile
 if ($LASTEXITCODE -ne 0) {
     throw "WiX build failed with exit code $LASTEXITCODE."
