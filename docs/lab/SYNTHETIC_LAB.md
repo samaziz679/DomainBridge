@@ -1,3 +1,5 @@
+> **Obsolète depuis le 2026-11-13.** Le laboratoire à deux forêts n'est pas construit : les essais se font sur un poste de réserve réel, voir `docs/adr/ADR-004-poste-admin-et-poste-de-reserve.md` et `docs/lab/PHASE1_FAISABILITE.md`. Ce document est conservé pour référence.
+
 # DomainBridge synthetic laboratory
 
 ## Purpose

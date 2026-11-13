@@ -15,10 +15,10 @@ Le produit débute par un MVP non destructif : découverte locale, enrôlement m
 
 | Élément | Choix |
 |---|---|
-| API centrale | ASP.NET Core sur .NET 8 LTS |
+| API centrale | ASP.NET Core sur .NET 10 LTS |
 | Console opérateur | React et TypeScript |
-| Agent Windows | Service Worker .NET 8, code signé |
-| Connecteur annuaire | Service .NET 8 installé sur un serveur d’administration dédié |
+| Agent Windows | Service Worker .NET 10, code signé |
+| Connecteur annuaire | Service .NET 10 installé sur un serveur d’administration dédié |
 | Base d’audit | PostgreSQL |
 | Identité du connecteur | gMSA ou identité managée avec délégation minimale |
 | Communication | HTTPS sortant de l’agent, mTLS, jetons courts liés à l’appareil |
@@ -58,3 +58,10 @@ Interdit :
 3. Agent signé, installable via Intune et GPO.
 4. API, agent et connecteur testés avec couverture mesurée.
 5. Une campagne exige une approbation humaine et produit une trace d’audit complète.
+
+## Révision du 2026-11-13
+
+- Socle porté de .NET 8 à **.NET 10 LTS** : .NET 8 est sorti du support le 10 novembre 2026.
+- La console opérateur est une application web unique ; le client de bureau a été retiré (ADR-003, D4).
+- Le catalogue de remédiations et les actions technicien ont été retirés du produit (périmètre v2).
+- PostgreSQL est remplacé par un stockage embarqué SQLite (ADR-006) ; l'authentification des opérateurs passe par la session Windows (ADR-005).

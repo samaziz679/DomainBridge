@@ -1,17 +1,21 @@
 using System.Text.Json;
 using DomainBridge.Contracts;
 using System.Net.Security;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
-using Npgsql;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
-var consoleAccess = builder.Configuration.GetSection(ConsoleAccessOptions.SectionName).Get<ConsoleAccessOptions>() ?? new();
-var agentTransportRequired =
-    !(builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"));
-var consoleReadApiEnabled =
-    builder.Environment.IsDevelopment() ||
-    builder.Environment.IsEnvironment("Testing") ||
-    consoleAccess.IsReady();
+var isDevelopmentOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
+var agentTransportRequired = !isDevelopmentOrTest;
+var operatorAccess = builder.Configuration.GetSection(OperatorAccessOptions.SectionName).Get<OperatorAccessOptions>() ?? new();
+var operatorAccessRequired = !isDevelopmentOrTest || operatorAccess.Enforce;
+if (operatorAccessRequired && (!operatorAccess.HasAnyGroup() || operatorAccess.InvalidEntries().Count > 0))
+{
+    throw new InvalidOperationException(
+        "OperatorAccess must list at least one group, and every group must be a security identifier (S-1-...).");
+}
 
 if (agentTransportRequired)
 {
@@ -24,30 +28,107 @@ if (agentTransportRequired)
         }));
 }
 
-var auditConnectionString = builder.Configuration.GetConnectionString("Audit");
-var auditStorageMode = AuditStorageSelector.Select(
-    builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"),
-    auditConnectionString);
-
-if (auditStorageMode == AuditStorageMode.Postgres)
-{
-    builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(auditConnectionString!));
-    builder.Services.AddSingleton<IAuditStore, PostgresAuditStore>();
-    builder.Services.AddSingleton<IInventoryStore, PostgresInventoryStore>();
-}
-else
+var storage = builder.Configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>() ?? new();
+var databasePath = StorageSelector.ResolveDatabasePath(isDevelopmentOrTest, storage);
+if (databasePath is null)
 {
     builder.Services.AddSingleton<IAuditStore, InMemoryAuditStore>();
     builder.Services.AddSingleton<IInventoryStore, InMemoryInventoryStore>();
 }
+else
+{
+    var database = new SqliteDatabase(databasePath);
+    database.Initialize();
+    builder.Services.AddSingleton(database);
+    builder.Services.AddSingleton<IAuditStore, SqliteAuditStore>();
+    builder.Services.AddSingleton<IInventoryStore, SqliteInventoryStore>();
+}
+
+builder.Services.Configure<OperatorAccessOptions>(builder.Configuration.GetSection(OperatorAccessOptions.SectionName));
+if (operatorAccessRequired)
+{
+    // Operators sign in with their Windows session; roles come from Active Directory groups.
+    builder.Services.AddTransient<IClaimsTransformation, OperatorRoleClaimsTransformation>();
+    var authentication = builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme);
+    if (!builder.Environment.IsEnvironment("Testing"))
+    {
+        // The in-memory test server cannot carry Windows authentication; tests register
+        // a stand-in scheme. With no scheme at all, protected routes fail closed.
+        authentication.AddNegotiate();
+    }
+    builder.Services.AddAuthorizationBuilder()
+        .AddPolicy(OperatorPolicies.Read, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireClaim(OperatorRoles.ClaimType, OperatorRoles.All))
+        .AddPolicy(OperatorPolicies.Prepare, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireClaim(OperatorRoles.ClaimType, OperatorRoles.Preparer))
+        .AddPolicy(OperatorPolicies.Approve, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireClaim(OperatorRoles.ClaimType, OperatorRoles.Approver))
+        .AddPolicy(OperatorPolicies.Technician, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireClaim(OperatorRoles.ClaimType, OperatorRoles.Technician));
+}
+
+builder.Services.Configure<AgentIdentityOptions>(builder.Configuration.GetSection(AgentIdentityOptions.SectionName));
+builder.Services.AddSingleton<IAgentIssuerChainReader>(_ => new X509AgentIssuerChainReader());
 
 var app = builder.Build();
 
+var agentIdentity = app.Services.GetRequiredService<IOptions<AgentIdentityOptions>>().Value;
+if (agentTransportRequired && agentIdentity.NormalizedIssuerThumbprints().Count == 0)
+{
+    throw new InvalidOperationException(
+        "AgentIdentity:TrustedIssuerThumbprints must pin at least one issuing authority outside development and test.");
+}
+
+var agentIdentityRequired = agentTransportRequired || agentIdentity.Enforce;
+
+AgentIdentityResult ResolveAgent(HttpRequest request, IAgentIssuerChainReader chainReader) =>
+    AgentIdentityResolver.Resolve(
+        request.HttpContext.Connection.ClientCertificate,
+        agentIdentityRequired,
+        agentIdentity,
+        chainReader);
+
+IResult RejectIdentityMismatch(IAuditStore auditStore, AgentIdentityResult caller, string claimedDeviceId)
+{
+    auditStore.Append(new AuditEvent(
+        Guid.NewGuid(),
+        DateTimeOffset.UtcNow,
+        "agent.identity.rejected",
+        claimedDeviceId,
+        AuditActors.Agent(caller.DeviceId),
+        AuditOutcomes.Denied));
+
+    return Results.Json(new { error = "agent_identity_mismatch" }, statusCode: StatusCodes.Status403Forbidden);
+}
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
+if (operatorAccessRequired)
+{
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
+
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-if (consoleReadApiEnabled)
+var console = app.MapGroup("/api/v1/console");
+if (operatorAccessRequired)
 {
-    app.MapGet("/api/v1/console/overview", (IAuditStore auditStore, IInventoryStore inventoryStore) =>
+    console.RequireAuthorization(OperatorPolicies.Read);
+}
+
+{
+    console.MapGet("/me", (HttpContext context) => Results.Ok(new
+    {
+        name = context.User.Identity?.Name ?? "anonymous",
+        roles = context.User.FindAll(OperatorRoles.ClaimType).Select(claim => claim.Value).Distinct().ToArray()
+    }));
+
+    console.MapGet("/overview", (IAuditStore auditStore, IInventoryStore inventoryStore) =>
     {
         var recentAudit = auditStore.GetRecent(1).FirstOrDefault();
         return Results.Ok(new
@@ -59,7 +140,7 @@ if (consoleReadApiEnabled)
         });
     });
 
-    app.MapGet("/api/v1/console/agents", (int? limit, IInventoryStore inventoryStore) =>
+    console.MapGet("/agents", (int? limit, IInventoryStore inventoryStore) =>
     {
         if (!ConsoleQuery.IsValidLimit(limit))
         {
@@ -69,7 +150,7 @@ if (consoleReadApiEnabled)
         return Results.Ok(inventoryStore.GetRecent(ConsoleQuery.ResolveLimit(limit)));
     });
 
-    app.MapGet("/api/v1/console/audit", (int? limit, IAuditStore auditStore) =>
+    console.MapGet("/audit", (int? limit, IAuditStore auditStore) =>
     {
         if (!ConsoleQuery.IsValidLimit(limit))
         {
@@ -78,14 +159,13 @@ if (consoleReadApiEnabled)
 
         return Results.Ok(auditStore.GetRecent(ConsoleQuery.ResolveLimit(limit)));
     });
+
 }
 
-app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore auditStore) =>
+app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore auditStore, IAgentIssuerChainReader chainReader) =>
 {
-    var transportValidation = AgentTransportSecurity.Validate(
-        request.HttpContext.Connection.ClientCertificate,
-        agentTransportRequired);
-    if (!transportValidation.IsSuccess)
+    var caller = ResolveAgent(request, chainReader);
+    if (!caller.IsSuccess)
     {
         return Results.Unauthorized();
     }
@@ -123,11 +203,20 @@ app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore audit
             return Results.BadRequest(new { error = enrollment.Error.ToString() });
         }
 
+        // The caller is whoever the certificate says it is; the body cannot claim otherwise.
+        if (!caller.IsAnonymous &&
+            (!string.Equals(enrollment.Value!.AgentId, caller.DeviceId, StringComparison.OrdinalIgnoreCase) ||
+             !string.Equals(enrollment.Value.CertificateThumbprint, caller.Thumbprint, StringComparison.OrdinalIgnoreCase)))
+        {
+            return RejectIdentityMismatch(auditStore, caller, enrollment.Value.AgentId);
+        }
+
         auditStore.Append(new AuditEvent(
             Guid.NewGuid(),
             DateTimeOffset.UtcNow,
             "agent.enrolled",
-            enrollment.Value!.AgentId));
+            enrollment.Value!.AgentId,
+            AuditActors.Agent(caller.DeviceId)));
 
         return Results.Ok(new EnrollmentResponse(
             enrollment.Value!.AgentId,
@@ -136,12 +225,10 @@ app.MapPost("/api/v1/enrollments", async (HttpRequest request, IAuditStore audit
     }
 });
 
-app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditStore, IInventoryStore inventoryStore) =>
+app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditStore, IInventoryStore inventoryStore, IAgentIssuerChainReader chainReader) =>
 {
-    var transportValidation = AgentTransportSecurity.Validate(
-        request.HttpContext.Connection.ClientCertificate,
-        agentTransportRequired);
-    if (!transportValidation.IsSuccess)
+    var caller = ResolveAgent(request, chainReader);
+    if (!caller.IsSuccess)
     {
         return Results.Unauthorized();
     }
@@ -180,6 +267,12 @@ app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditSt
             return Results.BadRequest(new { error = "invalid_inventory_metadata" });
         }
 
+        if (!caller.IsAnonymous &&
+            !string.Equals(payload.DeviceId.Trim(), caller.DeviceId, StringComparison.OrdinalIgnoreCase))
+        {
+            return RejectIdentityMismatch(auditStore, caller, payload.DeviceId.Trim());
+        }
+
         var inventory = new DeviceInventoryReport(
             payload.DeviceId.Trim(),
             payload.OperatingSystem.Trim(),
@@ -193,7 +286,8 @@ app.MapPost("/api/v1/inventory", async (HttpRequest request, IAuditStore auditSt
             Guid.NewGuid(),
             DateTimeOffset.UtcNow,
             "agent.inventory.reported",
-            inventory.DeviceId));
+            inventory.DeviceId,
+            AuditActors.Agent(caller.DeviceId)));
 
         return Results.Accepted($"/api/v1/inventory/{inventory.DeviceId}");
     }

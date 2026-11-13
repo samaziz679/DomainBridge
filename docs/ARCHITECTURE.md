@@ -7,6 +7,7 @@ Administrator
   └─ DomainBridge Console
        ├─ API and campaign service
        ├─ audit store
+       ├─ Intune / Microsoft Graph read connector
        ├─ source-directory read connector
        └─ target-directory connector
             └─ DomainBridge Windows Agent
@@ -14,7 +15,7 @@ Administrator
 
 ### Console
 
-The console manages access roles, approvals, campaigns, task definitions and immutable audit events. Administrators authenticate with an enterprise identity provider and MFA.
+The console is a single web application served by the central API (ADR-003, D4); there is no desktop client. It manages access roles, approvals, campaigns, task definitions and immutable audit events. Operators authenticate with their Windows session; roles come from Active Directory groups (ADR-005).
 
 ### Windows agent
 
@@ -23,6 +24,10 @@ The signed Windows service is installed by Intune or GPO. It initiates outbound 
 ### Directory connectors
 
 A source-directory connector reads authorised inventory data. A target-directory connector performs only delegated, least-privilege operations inside a dedicated migration OU. Neither connector distributes directory-administrator passwords to endpoints.
+
+### Intune and Entra connector
+
+The connector reads managed-device, compliance and deployment state through Microsoft Graph using a least-privilege application or delegated operator identity. DomainBridge presents reconciliation and migration evidence; it does not publish generic applications, operate update rings or replace Intune policy assignment.
 
 ## Deployment architecture
 
@@ -47,3 +52,4 @@ Both deployment routes must converge on the same agent version, service name, ce
 - No credential recovery, LSA secret collection or password migration.
 - No inbound management channel from the console to endpoints.
 - No production migration before laboratory verification and pilot approval.
+- No duplicate MDM, package deployment or Windows Update management engine; those responsibilities remain in Intune and Windows Autopatch.

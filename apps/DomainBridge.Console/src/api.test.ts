@@ -15,6 +15,7 @@ describe('loadConsoleData', () => {
     expect(result.overview.enrolledAgents).toBe(2)
     expect(result.agents[0].deviceId).toBe('device-001')
     expect(result.audit[0].action).toBe('agent.inventory.reported')
+    expect(fetcher).toHaveBeenCalledTimes(3)
   })
 
   it('fails closed when the control-plane API is unavailable', async () => {
