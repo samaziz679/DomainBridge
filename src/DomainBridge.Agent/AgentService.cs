@@ -20,6 +20,20 @@ public sealed class AgentOptions
 
     public int InventoryIntervalMinutes { get; init; } = 60;
 
+    /// <summary>
+    /// Thumbprints of the authorities whose certificates the agent may present,
+    /// separated by commas or semicolons. Empty accepts any authority; set it when
+    /// the machine holds several certificates in its own name (one per PKI, for instance).
+    /// </summary>
+    public string? CertificateIssuerThumbprints { get; init; }
+
+    public IReadOnlySet<string> IssuerThumbprints() =>
+        (CertificateIssuerThumbprints ?? string.Empty)
+            .Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(thumbprint => thumbprint.Replace(" ", string.Empty, StringComparison.Ordinal))
+            .Where(thumbprint => thumbprint.Length > 0)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Problems that prevent the service from running; empty when the settings are usable.</summary>
     public IReadOnlyList<string> Validate()
     {
@@ -38,6 +52,11 @@ public sealed class AgentOptions
             problems.Add("Agent:InventoryIntervalMinutes must be between 1 and 1440.");
         }
 
+        if (IssuerThumbprints().Any(thumbprint => thumbprint.Length is not (40 or 64) || !thumbprint.All(Uri.IsHexDigit)))
+        {
+            problems.Add("Agent:CertificateIssuerThumbprints must list certificate thumbprints.");
+        }
+
         return problems;
     }
 }
@@ -45,7 +64,8 @@ public sealed class AgentOptions
 /// <summary>
 /// Picks the certificate that identifies this machine to the server: a currently
 /// valid client-authentication certificate, with its private key, named after the
-/// machine. The server decides whether its issuer is trusted.
+/// machine. When issuing authorities are configured, only their certificates are
+/// considered. The server decides, on its side, whether the issuer is trusted.
 /// </summary>
 public static class AgentCertificateSelector
 {
@@ -54,10 +74,13 @@ public static class AgentCertificateSelector
     public static X509Certificate2? Select(
         IEnumerable<X509Certificate2> candidates,
         string deviceName,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        IReadOnlySet<string>? allowedIssuerThumbprints = null,
+        X509Certificate2Collection? additionalChainCertificates = null)
     {
         ArgumentNullException.ThrowIfNull(candidates);
         ArgumentException.ThrowIfNullOrWhiteSpace(deviceName);
+        var restrictIssuers = allowedIssuerThumbprints is { Count: > 0 };
 
         return candidates
             .Where(certificate => certificate.HasPrivateKey)
@@ -68,8 +91,24 @@ public static class AgentCertificateSelector
                 StringComparison.OrdinalIgnoreCase))
             .Where(certificate => !IsSelfSigned(certificate))
             .Where(HasClientAuthenticationUsage)
+            .Where(certificate => !restrictIssuers ||
+                IssuerThumbprints(certificate, additionalChainCertificates).Any(allowedIssuerThumbprints!.Contains))
             .OrderByDescending(certificate => certificate.NotAfter)
             .FirstOrDefault();
+    }
+
+    private static string[] IssuerThumbprints(X509Certificate2 certificate, X509Certificate2Collection? additional)
+    {
+        using var chain = new X509Chain();
+        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+        chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
+        if (additional is not null)
+        {
+            chain.ChainPolicy.ExtraStore.AddRange(additional);
+        }
+
+        chain.Build(certificate);
+        return chain.ChainElements.Skip(1).Select(element => element.Certificate.Thumbprint).ToArray();
     }
 
     private static bool IsSelfSigned(X509Certificate2 certificate) =>

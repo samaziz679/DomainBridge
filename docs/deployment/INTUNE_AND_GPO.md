@@ -18,11 +18,25 @@ L'agent est un MSI unique, `DomainBridge-Agent-<version>.msi`, identique pour to
 | Mise à jour | Une version supérieure remplace la précédente et **conserve** l'adresse du serveur |
 | Désinstallation | Arrête et retire le service, supprime les fichiers et la configuration |
 
-Le MSI ne contient aucun secret. Il prend un seul paramètre :
+Le MSI ne contient aucun secret. Il prend deux paramètres, tous deux conservés lors d'une mise à jour :
 
-| Paramètre | Rôle |
-|---|---|
-| `SERVERURL` | Adresse HTTPS du serveur DomainBridge, sur le poste de l'administrateur |
+| Paramètre | Obligatoire | Rôle |
+|---|---|---|
+| `SERVERURL` | oui | Adresse HTTPS du serveur DomainBridge, sur le poste de l'administrateur |
+| `CERTISSUERS` | non | Empreintes des autorités dont l'agent peut présenter un certificat, séparées par des virgules. Vide : toute autorité |
+
+## PKI : rien n'est codé en dur
+
+Aucune autorité de certification n'est inscrite dans le code. Tout se règle par configuration, des deux côtés :
+
+| Côté | Réglage | Effet |
+|---|---|---|
+| Serveur | `AgentIdentity:TrustedIssuerThumbprints` (liste) | Seuls les certificats émis par ces autorités sont acceptés. Plusieurs autorités peuvent coexister, par exemple pendant un changement de PKI |
+| Agent | `CERTISSUERS` à l'installation, ou `CertificateIssuerThumbprints` sous `HKLM\SOFTWARE\DomainBridge\Agent` | L'agent ne présente qu'un certificat émis par ces autorités |
+
+Le réglage côté agent est utile dès qu'un poste détient **plusieurs certificats à son nom** : celui de l'auto-inscription du domaine A, celui d'Intune, celui du domaine B. Sans lui, l'agent prend celui qui expire le plus tard, qui peut ne pas être celui que le serveur accepte.
+
+Changer de PKI en cours de projet se fait sans recompiler : ajouter la nouvelle autorité côté serveur, déployer les nouveaux certificats, mettre à jour `CERTISSUERS`, puis retirer l'ancienne autorité.
 
 Sans certificat de machine ou sans `SERVERURL`, le service s'installe et démarre quand même : il attend et réessaie. Un certificat livré plus tard par un profil Intune est donc pris en compte sans réinstallation.
 

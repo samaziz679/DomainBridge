@@ -24,6 +24,8 @@ Outside Development and Testing, Kestrel requires a client certificate and accep
 - Enrollment must name the certificate actually presented; a different thumbprint is refused.
 - `AgentIdentity:Enforce` can only tighten the default: it turns certificate identity on in a development host and cannot turn it off in production.
 
+- No authority is hard-coded. The server lists its trusted authorities in configuration, and the agent can be restricted to certificates from given authorities (`CertificateIssuerThumbprints`), which matters when a machine holds several certificates in its own name.
+
 Still open: how a device obtains its certificate in the first place (threat T2), and revocation checking.
 
 ## Deployment requirement

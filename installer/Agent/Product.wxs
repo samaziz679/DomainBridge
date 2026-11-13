@@ -22,6 +22,13 @@
     </Property>
     <SetProperty Id="SERVERURL" Value="[SAVEDSERVERURL]" After="AppSearch" Sequence="first" Condition="NOT SERVERURL AND SAVEDSERVERURL" />
 
+    <!-- Optional: thumbprints of the authorities whose certificates the agent may present. -->
+    <Property Id="CERTISSUERS" Secure="yes" />
+    <Property Id="SAVEDCERTISSUERS">
+      <RegistrySearch Id="SavedCertIssuersSearch" Root="HKLM" Key="SOFTWARE\DomainBridge\Agent" Name="CertificateIssuerThumbprints" Type="raw" />
+    </Property>
+    <SetProperty Id="CERTISSUERS" Value="[SAVEDCERTISSUERS]" After="AppSearch" Sequence="first" Condition="NOT CERTISSUERS AND SAVEDCERTISSUERS" />
+
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="DomainBridgeFolder" Name="DomainBridge">
         <Directory Id="INSTALLFOLDER" Name="Agent" />
@@ -54,6 +61,7 @@
         <RegistryKey Root="HKLM" Key="SOFTWARE\DomainBridge\Agent">
           <RegistryValue Name="Version" Type="string" Value="$(var.ProductVersion)" KeyPath="yes" />
           <RegistryValue Name="ServerUrl" Type="string" Value="[SERVERURL]" />
+          <RegistryValue Name="CertificateIssuerThumbprints" Type="string" Value="[CERTISSUERS]" />
         </RegistryKey>
       </Component>
     </ComponentGroup>

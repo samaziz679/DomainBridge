@@ -68,7 +68,7 @@ public static class Program
             return null;
         }
 
-        var certificate = FindMachineCertificate();
+        var certificate = FindMachineCertificate(options.IssuerThumbprints());
         if (certificate is null)
         {
             return null;
@@ -108,10 +108,11 @@ public static class Program
         return settings;
     }
 
-    private static X509Certificate2? FindMachineCertificate()
+    private static X509Certificate2? FindMachineCertificate(IReadOnlySet<string> allowedIssuerThumbprints)
     {
         using var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
         store.Open(OpenFlags.ReadOnly | OpenFlags.OpenExistingOnly);
-        return AgentCertificateSelector.Select(store.Certificates, Environment.MachineName, DateTimeOffset.UtcNow);
+        return AgentCertificateSelector.Select(
+            store.Certificates, Environment.MachineName, DateTimeOffset.UtcNow, allowedIssuerThumbprints);
     }
 }

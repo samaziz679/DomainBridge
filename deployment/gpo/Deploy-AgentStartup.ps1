@@ -23,6 +23,9 @@ param(
     [ValidatePattern('^https://')]
     [string]$ServerUrl,
 
+    # Optional: thumbprints of the authorities whose certificates the agent may present.
+    [string]$CertificateIssuerThumbprints,
+
     [switch]$AllowUnsigned
 )
 
@@ -52,7 +55,11 @@ if ($signature.Status -ne 'Valid' -and -not $AllowUnsigned) {
     throw "The agent MSI is not validly signed ($($signature.Status)); installation refused."
 }
 
-$arguments = @('/i', "`"$MsiPath`"", "SERVERURL=`"$ServerUrl`"", '/qn', '/norestart', '/l*v', "`"$logPath`"")
+$arguments = @('/i', "`"$MsiPath`"", "SERVERURL=`"$ServerUrl`"")
+if ($CertificateIssuerThumbprints) {
+    $arguments += "CERTISSUERS=`"$CertificateIssuerThumbprints`""
+}
+$arguments += @('/qn', '/norestart', '/l*v', "`"$logPath`"")
 $process = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\msiexec.exe') -ArgumentList $arguments -Wait -PassThru
 
 # 3010 means installed, restart required; the agent itself never forces one.

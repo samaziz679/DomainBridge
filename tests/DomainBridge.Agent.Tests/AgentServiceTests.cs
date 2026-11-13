@@ -51,6 +51,41 @@ public sealed class AgentServiceTests
         Assert.Null(AgentCertificateSelector.Select([expired], "SPARE01", Now.AddDays(31)));
     }
 
+    [Fact]
+    public void Selector_keeps_only_certificates_from_the_configured_authorities()
+    {
+        using var sourcePki = CreateAuthority("CN=Source Domain CA");
+        using var agentPki = CreateAuthority("CN=DomainBridge Agent CA");
+        using var fromSourcePki = Issue(sourcePki, "SPARE01", Now.AddDays(365));
+        using var fromAgentPki = Issue(agentPki, "SPARE01", Now.AddDays(30));
+        X509Certificate2[] candidates = [fromSourcePki, fromAgentPki];
+        X509Certificate2Collection authorities = [sourcePki, agentPki];
+        var allowed = new AgentOptions { CertificateIssuerThumbprints = $" {agentPki.Thumbprint.ToLowerInvariant()} ; " }.IssuerThumbprints();
+
+        var unrestricted = AgentCertificateSelector.Select(candidates, "SPARE01", Now);
+        var restricted = AgentCertificateSelector.Select(candidates, "SPARE01", Now, allowed, authorities);
+        var noMatch = AgentCertificateSelector.Select([fromSourcePki], "SPARE01", Now, allowed, authorities);
+
+        Assert.Equal(fromSourcePki.Thumbprint, unrestricted?.Thumbprint);
+        Assert.Equal(fromAgentPki.Thumbprint, restricted?.Thumbprint);
+        Assert.Null(noMatch);
+    }
+
+    [Theory]
+    [InlineData(null, 0, 0)]
+    [InlineData("", 0, 0)]
+    [InlineData("0123456789ABCDEF0123456789ABCDEF01234567", 1, 0)]
+    [InlineData("01 23 45 67 89 AB CD EF 01 23 45 67 89 AB CD EF 01 23 45 67, 0123456789abcdef0123456789abcdef01234567", 1, 0)]
+    [InlineData("0123456789ABCDEF0123456789ABCDEF01234567;FEDCBA9876543210FEDCBA9876543210FEDCBA98", 2, 0)]
+    [InlineData("CN=Some CA", 1, 1)]
+    public void Issuer_thumbprints_are_parsed_and_validated(string? configured, int expectedCount, int expectedProblems)
+    {
+        var options = new AgentOptions { ServerUrl = "https://admin-pc.lab-a.test/", CertificateIssuerThumbprints = configured };
+
+        Assert.Equal(expectedCount, options.IssuerThumbprints().Count);
+        Assert.Equal(expectedProblems, options.Validate().Count);
+    }
+
     [Theory]
     [InlineData(0, 60)]
     [InlineData(1, 1)]
@@ -134,10 +169,10 @@ public sealed class AgentServiceTests
         Assert.Equal(3, attempts);
     }
 
-    private static X509Certificate2 CreateAuthority()
+    private static X509Certificate2 CreateAuthority(string subject = "CN=DomainBridge Test Agent CA")
     {
         using var key = RSA.Create(2048);
-        var request = new CertificateRequest("CN=DomainBridge Test Agent CA", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest(subject, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         request.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
         return request.CreateSelfSigned(Now.AddDays(-1), Now.AddYears(2));
     }
