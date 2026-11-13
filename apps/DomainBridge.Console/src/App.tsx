@@ -1,6 +1,6 @@
 import brandMark from './assets/domainbridge-mark.svg'
 import './index.css'
-import type { AgentRecord, AuditRecord, RemediationRecord } from './api'
+import type { AgentRecord, AuditRecord } from './api'
 
 export interface DashboardModel {
   apiStatus: 'healthy' | 'unavailable'
@@ -13,13 +13,11 @@ export function App({
   dashboard,
   agents = [],
   audit = [],
-  remediations = [],
   connectionError
 }: {
   dashboard: DashboardModel
   agents?: AgentRecord[]
   audit?: AuditRecord[]
-  remediations?: RemediationRecord[]
   connectionError?: string
 }) {
   const apiIsHealthy = dashboard.apiStatus === 'healthy'
@@ -46,9 +44,6 @@ export function App({
           </a>
           <a className="nav-item" href="#audit">
             <span aria-hidden="true">◷</span> Audit trail
-          </a>
-          <a className="nav-item" href="#maintenance">
-            <span aria-hidden="true">✦</span> Maintenance
           </a>
           <a className="nav-item" href="#pilot">
             <span aria-hidden="true">◇</span> Pilot readiness
@@ -82,10 +77,10 @@ export function App({
             <p className="eyebrow">Safe operating posture</p>
             <h2>See the estate. Understand the change. Then decide.</h2>
             <p>
-              A single, evidence-led workspace for inventory, maintenance and
+              A single, evidence-led workspace for inventory and
               domain migration readiness — with no action hidden behind a click.
             </p>
-            <a className="primary-link" href="#maintenance">Review maintenance catalogue <span aria-hidden="true">→</span></a>
+            <a className="primary-link" href="#pilot">Review pilot readiness <span aria-hidden="true">→</span></a>
           </div>
           <div className="bridge-visual" aria-hidden="true">
             <span className="bridge-domain">A</span>
@@ -125,7 +120,7 @@ export function App({
         <section className="readiness-strip" aria-label="Safe workflow">
           <div className="readiness-copy">
             <span className="step-index">01</span>
-            <div><strong>Review the scope</strong><p>Inventory and approved maintenance policies are ready for review.</p></div>
+            <div><strong>Review the scope</strong><p>Inventory and audit evidence are ready for review.</p></div>
           </div>
           <div className="readiness-divider" aria-hidden="true" />
           <div className="readiness-copy muted">
@@ -179,31 +174,6 @@ export function App({
                   <div className="event-icon" aria-hidden="true">✓</div>
                   <div><strong>{event.action}</strong><p>{event.subjectId}</p></div>
                   <time>{new Date(event.occurredAtUtc).toLocaleDateString()}</time>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="panel maintenance-panel" id="maintenance">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Approved operations</p>
-                <h2>Maintenance catalogue</h2>
-              </div>
-              <span className="panel-count">Read-only</span>
-            </div>
-            <div className="audit-list">
-              {remediations.length === 0 ? (
-                <p className="empty-state">No approved maintenance actions are available.</p>
-              ) : remediations.map(action => (
-                <div className="audit-event" key={action.id}>
-                  <div className="event-icon" aria-hidden="true">✦</div>
-                  <div>
-                    <strong>{action.displayName}</strong>
-                    <p>{action.description}</p>
-                    <span className="policy-tag">{action.requiresApproval ? 'Approval required' : 'Read-only check'}</span>
-                    {action.mayRequireRestart && <span className="policy-tag">May restart</span>}
-                  </div>
                 </div>
               ))}
             </div>

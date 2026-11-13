@@ -60,17 +60,4 @@ public sealed class ConsoleReadEndpointTests : IClassFixture<WebApplicationFacto
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
-
-    [Fact]
-    public async Task Remediation_catalog_exposes_policy_metadata_without_scripts()
-    {
-        var response = await _client.GetAsync("/api/v1/console/remediations");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var payload = await response.Content.ReadAsStringAsync();
-        Assert.Contains("windows-update-reset", payload);
-        Assert.Contains("requiresApproval", payload);
-        Assert.DoesNotContain("Invoke-Expression", payload, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("powershell.exe", payload, StringComparison.OrdinalIgnoreCase);
-    }
 }

@@ -2,7 +2,7 @@
   <Package
     Name="DomainBridge Test Lab"
     Manufacturer="DomainBridge"
-    Version="0.2.6"
+    Version="0.3.0"
     UpgradeCode="{C34D1D52-7EC4-48A4-9BDB-9315B0C1AC08}"
     Language="1033"
     Scope="perMachine">
@@ -19,8 +19,8 @@
         <Shortcut
           Id="DesktopShortcut"
           Name="DomainBridge"
-          Description="Open DomainBridge Operations"
-          Target="[INSTALLFOLDER]Desktop\DomainBridge.Desktop.exe"
+          Description="Open the DomainBridge laboratory console"
+          Target="[INSTALLFOLDER]Run-DomainBridgeConsole.cmd"
           WorkingDirectory="INSTALLFOLDER" />
         <RegistryValue Root="HKLM" Key="Software\DomainBridge\TestLab" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
       </Component>
@@ -31,9 +31,9 @@
         <Component Id="StartMenuShortcutComponent" Guid="{C6F6E63D-16D8-4439-BB38-149DFCF3F6B9}">
           <Shortcut
             Id="StartMenuLaunchShortcut"
-            Name="DomainBridge Operations"
-            Description="Open DomainBridge Operations"
-            Target="[INSTALLFOLDER]Desktop\DomainBridge.Desktop.exe"
+            Name="DomainBridge Console"
+            Description="Open the DomainBridge laboratory console"
+            Target="[INSTALLFOLDER]Run-DomainBridgeConsole.cmd"
             WorkingDirectory="INSTALLFOLDER" />
           <Shortcut
             Id="StartMenuUninstallShortcut"

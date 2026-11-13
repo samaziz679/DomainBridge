@@ -9,14 +9,13 @@ describe('loadConsoleData', () => {
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify([{ deviceId: 'device-001', operatingSystem: 'Windows 11', architecture: 'X64', agentVersion: '1.0', capturedAtUtc: '2026-11-11T00:00:00Z' }]), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify([{ eventId: 'event-001', occurredAtUtc: '2026-11-11T00:00:00Z', action: 'agent.inventory.reported', subjectId: 'device-001' }]), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify([{ id: 'network-diagnostics', displayName: 'Diagnostiquer la connectivité réseau', description: 'Read-only', requiresApproval: false, mayRequireRestart: false }]), { status: 200 }))
 
     const result = await loadConsoleData('https://control.example', fetcher)
 
     expect(result.overview.enrolledAgents).toBe(2)
     expect(result.agents[0].deviceId).toBe('device-001')
     expect(result.audit[0].action).toBe('agent.inventory.reported')
-    expect(result.remediations[0].id).toBe('network-diagnostics')
+    expect(fetcher).toHaveBeenCalledTimes(3)
   })
 
   it('fails closed when the control-plane API is unavailable', async () => {

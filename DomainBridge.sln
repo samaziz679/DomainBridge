@@ -18,10 +18,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DomainBridge.DirectoryConne
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DomainBridge.DirectoryConnector.Tests", "tests\DomainBridge.DirectoryConnector.Tests\DomainBridge.DirectoryConnector.Tests.csproj", "{B4A6E9B0-397C-4FAE-AB52-53224694C0EA}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A6342FB7-9194-4E33-A2C1-86500B16C7BE}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DomainBridge.Desktop", "src\DomainBridge.Desktop\DomainBridge.Desktop.csproj", "{00E4947D-B0F0-4673-A857-F71BFFB694FA}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -60,12 +56,5 @@ Global
 		{B4A6E9B0-397C-4FAE-AB52-53224694C0EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B4A6E9B0-397C-4FAE-AB52-53224694C0EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B4A6E9B0-397C-4FAE-AB52-53224694C0EA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{00E4947D-B0F0-4673-A857-F71BFFB694FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{00E4947D-B0F0-4673-A857-F71BFFB694FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{00E4947D-B0F0-4673-A857-F71BFFB694FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{00E4947D-B0F0-4673-A857-F71BFFB694FA}.Release|Any CPU.Build.0 = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{00E4947D-B0F0-4673-A857-F71BFFB694FA} = {A6342FB7-9194-4E33-A2C1-86500B16C7BE}
 	EndGlobalSection
 EndGlobal

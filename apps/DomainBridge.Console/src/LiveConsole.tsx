@@ -27,7 +27,6 @@ export function LiveConsole({ apiBaseUrl }: { apiBaseUrl: string }) {
       dashboard={data?.overview ?? unavailableDashboard}
       agents={data?.agents ?? []}
       audit={data?.audit ?? []}
-      remediations={data?.remediations ?? []}
       connectionError={error}
     />
   )

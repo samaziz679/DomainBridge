@@ -9,6 +9,5 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Npgsql" Version="10.0.3" />
-    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.*" />
   </ItemGroup>
 </Project>
