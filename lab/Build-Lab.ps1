@@ -32,6 +32,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Keep a build log that can be read afterwards from a non-elevated session.
+$logRoot = Join-Path (Split-Path -Parent $PSScriptRoot) 'artifacts\lab'
+New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
+Start-Transcript -LiteralPath (Join-Path $logRoot ("build-lab-{0:yyyyMMdd-HHmmss}.log" -f (Get-Date))) | Out-Null
+
 & (Join-Path $PSScriptRoot 'Test-LabHost.ps1') -Topology $Topology
 if ($LASTEXITCODE -ne 0) {
     throw 'The host does not meet the laboratory requirements.'
