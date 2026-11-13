@@ -15,7 +15,7 @@ Administrator
 
 ### Console
 
-The console manages access roles, approvals, campaigns, task definitions and immutable audit events. Administrators authenticate with an enterprise identity provider and MFA.
+The console is a single web application served by the central API (ADR-003, D4); there is no desktop client. It manages access roles, approvals, campaigns, task definitions and immutable audit events. Administrators authenticate with an enterprise identity provider and MFA.
 
 ### Windows agent
 
