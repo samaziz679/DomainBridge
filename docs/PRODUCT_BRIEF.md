@@ -1,60 +1,125 @@
-# DomainBridge — objectif produit recadré
+# DomainBridge — périmètre produit v2
+
+- Version : 2.0 — 2026-11-13 (remplace « objectif produit recadré »)
+- Statut : **proposition à valider**. Les points marqués *(à décider)* renvoient aux décisions D1–D7 de `docs/audit/2026-11-13-audit-domainbridge.md`.
 
 ## Vision
 
-DomainBridge est le cockpit centralisé qui rend une migration Windows **Domain A → Domain B** pilotable, vérifiable et réversible, tout en utilisant Microsoft Intune comme système de gestion des appareils.
+DomainBridge bascule, de manière centralisée, des postes Windows du **domaine A** vers le **domaine B** et rattache les profils locaux existants aux comptes déjà migrés, par vagues approuvées, avec preuve avant/après et retour arrière.
 
-## Problème traité
+## Hypothèse d'entrée
 
-Lors d'une migration de domaine, les équipes doivent faire passer les postes Windows et leurs profils locaux du domaine A vers le domaine B après la migration des objets annuaire. Intune déploie et met à jour les postes gérés, mais ne fournit pas à lui seul un workflow de migration de domaine avec précontrôles, orchestration de profils, preuves avant/après et rollback de pilote.
+La migration des objets d'annuaire est **terminée avant toute campagne** : utilisateurs, comptes ordinateurs, groupes de sécurité, OU et GPO existent dans B. DomainBridge ne crée, ne migre et ne modifie aucun de ces objets, à une exception près : la réinitialisation du compte ordinateur cible nécessaire à la jonction (et du compte source pour un retour arrière *(à décider, D3)*).
 
-## Hypothèses et frontière de migration
+## Entrée : la liste de migration
 
-- Les objets Active Directory sont déjà présents dans le domaine B avant toute campagne : utilisateurs, comptes ordinateurs, groupes de sécurité, unités d'organisation et GPO nécessaires.
-- DomainBridge reçoit une **liste centralisée de postes à migrer**, avec au minimum l'identité du poste source, l'identité attendue dans le domaine B et le dernier utilisateur interactif connu.
-- Le dernier utilisateur connecté sert à identifier le **profil principal candidat à migrer**. Les postes partagés, les profils multiples, les profils temporaires et les comptes de service sont signalés comme exceptions à valider par un technicien.
-- Le périmètre d'exécution est limité au **poste Windows** : précontrôle, sortie/entrée de domaine selon le runbook approuvé, association du profil local au compte déjà migré, redémarrage, validation et rollback documenté.
-- La création, la migration ou la modification d'objets AD, d'utilisateurs, de groupes et de GPO reste hors périmètre DomainBridge.
+Fichier CSV importé dans la console, une ligne par poste :
 
-## Utilisateurs
+| Colonne | Obligatoire | Rôle |
+|---|---|---|
+| `poste_source` | oui | Nom du poste dans A |
+| `poste_cible` | non | Nom dans B si différent *(D2)* |
+| `dernier_utilisateur` | oui | Compte A du dernier utilisateur connecté (`A\login`) : profil principal candidat |
+| `utilisateur_cible` | non | Compte B si le login change ; par défaut même login |
+| `vague` | non | Affectation à une vague |
 
-- Administrateur poste de travail : prépare les collections et exécute les vagues approuvées.
-- Administrateur AD : délègue les opérations de domaine et valide les prérequis annuaire.
-- Responsable migration : suit le risque, les résultats, les incidents et la décision de passage à la vague suivante.
+La liste est un **point de départ, pas une vérité** : la console la rapproche de ce que l'agent observe réellement sur le poste (profils présents, dernière utilisation, taille) et de ce que les connecteurs trouvent dans A et B. Tout écart place le poste en **quarantaine** jusqu'à décision d'un technicien.
 
-## Capacités à développer
+## Dans le périmètre
 
-1. **Import et réconciliation de liste** — importer la liste centralisée, retrouver le poste, le compte ordinateur cible et le dernier utilisateur connu ; mettre en quarantaine les ambiguïtés.
-2. **Précontrôles de poste** — connectivité DNS/DC, appartenance, canal sécurisé, profil candidat, BitLocker, espace disque et prérequis applicatifs.
-3. **Campagnes de migration** — vagues, fenêtre de maintenance, approbation séparée, état détaillé par appareil et arrêt de vague.
-4. **Orchestration de profil** — préparation et suivi d'outils approuvés (par exemple USMT ou ProfWiz sous licence) pour rattacher le profil local au compte déjà migré ; jamais de mots de passe ou secrets.
-5. **Validation Domain B** — confirmer l'appartenance au domaine cible, la résolution DNS, la connexion du compte attendu et l'intégrité du profil après redémarrage.
-6. **Rollback documenté** — état de retour enregistré avant changement et procédure guidée après un échec de pilote.
-7. **Preuve et reporting** — preuve avant/après, chronologie, export support/SIEM et tableau de décision de vague.
+### 1. Import et rapprochement
+- Import de la liste, contrôle de format, détection des doublons.
+- Résolution de chaque compte A et B (existence, compte actif, identifiant de sécurité) par les connecteurs.
+- Confrontation avec l'inventaire de l'agent ; mise en quarantaine des ambiguïtés.
 
-## Intune : responsabilités conservées
+### 2. Inventaire de migration (agent, lecture seule)
+- Appartenance au domaine, état du canal sécurisé, version de Windows.
+- Profils locaux : compte, taille, dernière utilisation, état chargé. Aucune lecture du contenu des profils.
+- Signaux de risque : BitLocker, fichiers EFS, 802.1X/certificat machine, jonction hybride Entra, espace disque, comptes de A présents dans les groupes locaux, tâches planifiées et services sous compte de A, session ouverte.
 
-- Enrôlement et conformité MDM.
-- Déploiement d'applications Win32, scripts et remédiations.
-- Windows Update, Autopatch, anneaux, pilotes et mises à niveau Windows.
-- Actions d'appareil usuelles et gestion des politiques.
+### 3. Précontrôles et simulation
+- Verdict par poste : **prêt**, **prêt avec réserves**, **bloqué**, avec motif normalisé.
+- Visibilité d'un contrôleur de domaine B et résolution DNS depuis le poste *(D1)*.
+- Simulation complète sans modification, obligatoire avant toute vague réelle.
 
-## Hors périmètre DomainBridge
+### 4. Campagnes et vagues
+- Vagues, fenêtre de maintenance, plafond de postes simultanés, arrêt d'urgence d'une vague.
+- Double approbation : la personne qui prépare n'est pas celle qui approuve.
+- Seuil d'arrêt automatique si le taux d'échec d'une vague dépasse une limite configurée.
 
-- Réimplémentation d'Intune, Autopatch, PDQ Deploy ou d'un dépôt général de packages.
-- Gestionnaire générique MSI/EXE/WinGet ou orchestrateur général de patching.
-- Collecte de mots de passe, secrets LSA, caches d'authentification ou jetons.
-- Prise en main à distance généraliste ; l'outil s'intègre aux solutions existantes.
+### 5. Migration du poste (trois phases)
+1. **Préparer** — réversible, en arrière-plan, sans interruption de l'utilisateur : capture de l'état de retour, ajout des droits du compte B sur le dossier et le registre du profil. Rien n'est retiré.
+2. **Basculer** — en fenêtre de maintenance, un redémarrage : jonction au domaine B par jeton de jonction hors ligne chiffré pour ce poste, déclaration du profil pour le compte B, correction des groupes locaux.
+3. **Valider** — après redémarrage : appartenance à B, canal sécurisé, profil rattaché, sauvegarde de la clé BitLocker dans B, réenregistrement des applications modernes à la première ouverture de session.
 
-## Mesures de succès du pilote
+### 6. Profils
+- Profil principal désigné par la liste ; profils supplémentaires sur décision explicite (postes partagés).
+- Rattachement sur place, sans copie de données.
+- Correspondance de comptes A → B explicite quand les logins diffèrent.
 
-- 100 % des enregistrements de la liste pilote sont réconciliés ou explicitement placés en exception.
-- 100 % des appareils pilotes ont un précontrôle complet et une preuve avant/après.
-- 100 % des changements de migration sont associés à un opérateur, une approbation et un journal d'audit.
-- Un échec pilote peut être isolé et faire l'objet d'un rollback documenté sans bloquer une vague ultérieure.
-- Le profil principal désigné est validé après rattachement au compte déjà migré dans le domaine B.
+### 7. Retour arrière
+- Avant bascule : annulation complète et automatique.
+- Après bascule : retour dans A piloté par l'agent si la validation échoue dans le délai configuré, ou sur demande d'un opérateur *(modalité selon D3)*.
+- Chaque étape destructive a un chemin de retour testé en laboratoire avant d'être autorisée en pilote.
 
-## Références locales de contexte
+### 8. Preuve et reporting
+- Journal d'audit : qui, quoi, quel poste, quelle tâche, quel résultat, quand.
+- Fiche de preuve par poste (état avant, étapes, état après), tableau de bord de vague, export CSV et SIEM.
 
-- **ProfWiz / ForensiT** — `C:\Users\Admin\Documents\Claude\Projects\REA\Profwiz.exe` : référence d'orchestration de profil. Son exécutable, sa licence et ses mécanismes internes ne sont ni distribués ni reproduits par DomainBridge.
-- **Admin Arsenal / PDQ Deploy et PDQ Inventory** — `C:\Users\Admin\Desktop\Admin Arsenal.zip` : référence fonctionnelle pour l'expérience opérateur (inventaire, cible, statut et historique). Aucun code ou composant propriétaire n'est repris.
+### 9. Distribution de l'agent
+- Un seul service Windows signé, un seul MSI, livré par Intune et par GPO avec les mêmes règles de version, de détection et de mise à jour.
+- Désinstallation automatique de l'agent en fin de projet.
+
+## Classes d'exception (traitées, mais jamais automatiquement)
+
+| Classe | Traitement |
+|---|---|
+| Poste partagé / plusieurs profils actifs | Choix explicite des profils par un technicien |
+| Poste nomade sans accès à un contrôleur de domaine B | Reporté jusqu'à présence sur site ou VPN avant ouverture de session |
+| Fichiers EFS détectés | Bloqué : déchiffrement par l'utilisateur avant migration |
+| Réseau dépendant d'un certificat machine de A (802.1X) | Bloqué tant que l'équivalent B n'est pas en place |
+| Poste hybride Entra / géré par Intune | Vague dédiée, après validation en laboratoire du changement d'identité d'appareil |
+| Dernier utilisateur = compte d'administration ou de service | Quarantaine |
+| Serveurs, contrôleurs de domaine | Refusés |
+
+## Limites connues, à communiquer aux utilisateurs
+
+Ne suivent **pas** le profil, par conception (ce sont des secrets liés à l'ancien compte) :
+- mots de passe enregistrés dans les navigateurs et le Gestionnaire d'identifiants ;
+- certificats personnels avec clé privée ;
+- sessions ouvertes des applications (OneDrive, Teams, Outlook) : une reconnexion est demandée.
+
+## Hors périmètre
+
+- Création ou migration d'utilisateurs, groupes, comptes ordinateurs, GPO, sIDHistory.
+- Migration de mots de passe, de secrets LSA, de caches d'authentification, de jetons.
+- Migration de serveurs, de boîtes aux lettres, de données de serveurs de fichiers et de leurs droits.
+- Catalogue de remédiations, actions technicien génériques, déploiement de logiciels, gestion des mises à jour, prise en main à distance : **le code existant de ce type est gelé** et sera retiré.
+- Remplacement d'Intune, d'Autopatch ou d'un outil d'inventaire.
+- Exécution de scripts arbitraires depuis la console.
+
+## Utilisateurs et rôles
+
+| Rôle | Peut |
+|---|---|
+| Préparateur (administrateur poste de travail) | Importer, rapprocher, lancer simulations, composer les vagues |
+| Approbateur (responsable migration) | Approuver ou refuser une vague, déclencher l'arrêt d'urgence |
+| Technicien | Lever une quarantaine, traiter une exception, demander un retour arrière |
+| Lecteur (support, audit) | Consulter états et preuves |
+
+## Choix structurants *(à confirmer)*
+
+| Sujet | Proposition | Alternatives écartées |
+|---|---|---|
+| Changement de domaine | Jonction hors ligne, jeton chiffré par poste, connecteur B sous gMSA délégué | Compte de jonction avec mot de passe sur le poste : contraire aux règles de sécurité |
+| Profil *(D5)* | Moteur natif dans l'agent, sur API Windows documentées, sans rétro-ingénierie d'outil tiers | ProfWiz : licence par poste et boîte noire difficile à auditer. USMT : copie complète, lent, double l'espace disque |
+| Console *(D4)* | Web unique servie par l'API, Entra ID + rôles | Client WPF local : mono-opérateur, incompatible avec la double approbation |
+| Socle | .NET 10 LTS (API, agent, connecteurs), PostgreSQL, React | Rester sur .NET 8 : hors support depuis le 10/11/2026 |
+
+## Mesures de succès
+
+| Jalon | Critère |
+|---|---|
+| Laboratoire | 100 % des scénarios de la matrice passent, retour arrière compris, sur chaque version de Windows visée |
+| Pilote | 100 % des lignes rapprochées ou en exception explicite ; ≥ 95 % de bascules réussies au premier essai ; 0 poste inutilisable ; chaque échec ramené à l'état initial |
+| Généralisation | Chaque changement relié à un préparateur, un approbateur et une preuve ; durée d'indisponibilité par poste mesurée et publiée |
