@@ -34,6 +34,7 @@ public sealed class InMemoryInventoryStore : IInventoryStore
         _devices.Values.OrderByDescending(device => device.CapturedAtUtc).Take(limit).ToArray();
 }
 
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(Justification = "Requires a PostgreSQL instance; to be covered by integration tests in tranche 2.4.")]
 public sealed class PostgresInventoryStore(NpgsqlDataSource dataSource) : IInventoryStore
 {
     public void Upsert(DeviceInventoryReport report)

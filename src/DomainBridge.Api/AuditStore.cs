@@ -35,6 +35,7 @@ public sealed class InMemoryAuditStore : IAuditStore
         _events.OrderByDescending(auditEvent => auditEvent.OccurredAtUtc).Take(limit).ToArray();
 }
 
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(Justification = "Requires a PostgreSQL instance; to be covered by integration tests in tranche 2.4.")]
 public sealed class PostgresAuditStore(NpgsqlDataSource dataSource) : IAuditStore
 {
     public IReadOnlyCollection<AuditEvent> Events =>

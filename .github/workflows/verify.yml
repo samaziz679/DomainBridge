@@ -9,28 +9,38 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  verify:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
-      - run: dotnet restore DomainBridge.sln --locked-mode
-      - run: dotnet test DomainBridge.sln --no-restore --configuration Release
-  console:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/DomainBridge.Console
-    steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: apps/DomainBridge.Console/package-lock.json
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
-      - run: npm audit --audit-level=high
+      - name: Verify
+        shell: pwsh
+        run: ./scripts/verify.ps1
+      - name: Build laboratory installer
+        shell: pwsh
+        run: |
+          dotnet tool restore
+          ./installer/TestLab/Build-TestLabMsi.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-lab-installer
+          path: artifacts/test-lab-installer/*.msi
+          if-no-files-found: error
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
