@@ -14,8 +14,8 @@
 | D3 | Retour arrière | Droit délégué dans A : réinitialisation des comptes ordinateurs d'une OU précise | Retour arrière automatique par l'agent après bascule. Le connecteur source a une écriture, limitée à cette seule opération, sous gMSA |
 | D4 | Console | Console web unique | `DomainBridge.Desktop` est gelé puis retiré de la solution et de l'installeur |
 | D5 | Profil | Moteur natif dans l'agent | Fondé sur les API Windows documentées. Aucun composant tiers, aucune rétro-ingénierie. Toute la charge de test est interne |
-| D6 | Volume et versions | 200 à 1 000 postes ; Windows 10 et Windows 11 | Vagues de quelques dizaines de postes. Matrice de laboratoire : une image Windows 10 22H2 et une image Windows 11 de la version majoritaire du parc. Toute version plus ancienne est refusée au précontrôle |
-| D7 | Hébergement | Serveur interne | API, base et console sur un serveur Windows du réseau interne, joignable en HTTPS par les postes. Un poste nomade doit être sur le VPN pour que son agent communique |
+| D6 | Volume et versions | 200 à 1 000 postes ; Windows 10 et Windows 11 | Vagues de quelques dizaines de postes. Un poste de réserve par version (ADR-004) : Windows 11 de la version majoritaire du parc, puis Windows 10 22H2. Toute version plus ancienne est refusée au précontrôle |
+| D7 | Hébergement | ~~Serveur interne~~ — remplacé par l'ADR-004 : poste de l'administrateur | API, base et console sur un serveur Windows du réseau interne, joignable en HTTPS par les postes. Un poste nomade doit être sur le VPN pour que son agent communique |
 
 ## Points restant ouverts
 
@@ -23,7 +23,7 @@
 |---|---|
 | Autorité de certification des agents (dédiée DomainBridge, PKI interne existante, ou profil de certificat Intune) | Tranche 2.2, avec l'équipe sécurité |
 | Part réelle de postes hybrides Entra, de postes nomades et de postes partagés | Mesurée par la phase 3 (lecture seule) sur le parc réel |
-| Version exacte de Windows 11 à mettre dans le laboratoire | Mesurée par la phase 3 |
+| Version exacte de Windows 11 du poste de réserve | Mesurée par la phase 3 |
 | OU de A et de B sur lesquelles porter les délégations | Tranche 0.1, avec l'administrateur AD |
 
 ## Alternatives écartées

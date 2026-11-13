@@ -128,7 +128,7 @@ C'est la zone la plus exposée aux élévations de privilèges, car l'agent mani
 |---|---|---|---|---|---|
 | T25 | I | Le serveur DomainBridge tombe pendant une vague ; les agents concluent à un échec et reviennent tous en arrière | Le retour automatique se décide sur des **faits locaux** (contrôleur B injoignable, canal sécurisé invalide), jamais sur l'indisponibilité de la console | 4.6 | à concevoir |
 | T26 | I | Poste isolé du réseau après redémarrage (certificat réseau de A) | Précontrôle bloquant ; retour automatique local | 3.4, 4.6 | à concevoir |
-| T27 | I | Le verrou « laboratoire » est levé par erreur de configuration en production | Les étapes modifiantes exigent à la fois le mode et une liste d'autorisation de postes ; absence de configuration = refus | 4.1 | à concevoir |
+| T27 | I | Une étape modifiante d'essai s'exécute sur un poste réel par erreur de configuration | Tant que le pilote n'est pas ouvert, les étapes modifiantes exigent que le poste figure dans une liste d'autorisation et que son compte soit dans l'OU de test (ADR-004) ; absence de configuration = refus | 4.1 | à concevoir |
 
 ### 5.8 Chaîne de fabrication et de livraison (F6, B8)
 

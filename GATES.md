@@ -26,17 +26,16 @@ Un jalon n'est coché qu'avec une commande rejouable et une preuve datée. Plan 
 - Les magasins PostgreSQL (`PostgresAuditStore`, `PostgresInventoryStore`) ne sont couverts par aucun test : exclus du seuil de couverture jusqu'aux tests d'intégration de la tranche 2.4.
 - Les constats de sécurité S3 à S7 de l'audit restent ouverts (phase 2). S1 et S2 ont disparu avec le code retiré, mais l'API n'a toujours aucune authentification d'opérateur.
 
-## Phase 1 — Preuves de faisabilité en laboratoire
+## Phase 1 — Preuves de faisabilité sur poste de réserve
 
-Protocole : `docs/lab/PHASE1_FAISABILITE.md`.
+Décision : `docs/adr/ADR-004-poste-admin-et-poste-de-reserve.md`. Protocole : `docs/lab/PHASE1_FAISABILITE.md`.
 
-- [ ] **1.1 — Laboratoire à deux forêts reconstruit par script.**
-  CHECK : `./lab/Test-LabHost.ps1` puis `./lab/Build-Lab.ps1`
-  ÉTAT : 2026-11-13 — scripts écrits, syntaxe vérifiée, **jamais exécutés**. La machine de développement ne remplit pas les prérequis (Hyper-V absent, 1,8 Go de mémoire libre sur 15,6, aucun ISO Windows) : `Test-LabHost.ps1` renvoie 1 avec six prérequis manquants.
+- [ ] **1.1 — Banc d'essai prêt** (poste de réserve, OU de test dans A et B, comptes fictifs, délégations).
+  ÉTAT : 2026-11-13 — à réunir avec l'administrateur AD ; rien n'est encore en place.
 
 - [ ] **1.2 — Jonction hors ligne de A vers B.**
-  CHECK : `./lab/spikes/Spike-OfflineDomainJoin.ps1 -Variant Direct`
-  ÉTAT : script écrit, non exécuté.
+  CHECK : `lab/spikes/New-SpikeJoinToken.ps1` puis `lab/spikes/Invoke-SpikeJoinOnSpare.ps1`
+  ÉTAT : scripts écrits, syntaxe vérifiée, garde-fou de nom de machine vérifié ; **jamais exécutés sur un domaine**.
 
 - [ ] **1.3 — Rattachement du profil sur place.** Protocole écrit ; script à écrire au vu des résultats de 1.2.
 

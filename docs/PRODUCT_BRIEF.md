@@ -59,7 +59,7 @@ La liste est un **point de départ, pas une vérité** : la console la rapproche
 ### 7. Retour arrière
 - Avant bascule : annulation complète et automatique.
 - Après bascule : retour dans A piloté par l'agent si la validation échoue dans le délai configuré, ou sur demande d'un opérateur.
-- Chaque étape destructive a un chemin de retour testé en laboratoire avant d'être autorisée en pilote.
+- Chaque étape destructive a un chemin de retour testé sur poste de réserve avant d'être autorisée en pilote.
 
 ### 8. Preuve et reporting
 - Journal d'audit : qui, quoi, quel poste, quelle tâche, quel résultat, quand.
@@ -87,7 +87,7 @@ Intune et la GPO **livrent** l'agent ; la console **pilote** la migration. Aucun
 | Poste nomade sans accès à un contrôleur de domaine B | Reporté jusqu'à présence sur site ou VPN avant ouverture de session |
 | Fichiers EFS détectés | Bloqué : déchiffrement par l'utilisateur avant migration |
 | Réseau dépendant d'un certificat machine de A (802.1X) | Bloqué tant que l'équivalent B n'est pas en place |
-| Poste hybride Entra / géré par Intune | Vague dédiée, après validation en laboratoire du changement d'identité d'appareil |
+| Poste hybride Entra / géré par Intune | Vague dédiée, après validation sur poste de réserve du changement d'identité d'appareil |
 | Dernier utilisateur = compte d'administration ou de service | Quarantaine |
 | Serveurs, contrôleurs de domaine, Windows antérieur à Windows 10 | Refusés |
 
@@ -123,13 +123,13 @@ Ne suivent **pas** le profil, par conception (ce sont des secrets liés à l'anc
 | Changement de domaine | Jonction hors ligne, jeton chiffré par poste, connecteur B sous gMSA délégué | Compte de jonction avec mot de passe sur le poste : contraire aux règles de sécurité |
 | Profil | Moteur natif dans l'agent, sur API Windows documentées, sans rétro-ingénierie d'outil tiers | ProfWiz : licence par poste et boîte noire difficile à auditer. USMT : copie complète, lent, double l'espace disque |
 | Console | Web unique servie par l'API, Entra ID + rôles | Client WPF local : mono-opérateur, incompatible avec la double approbation |
-| Hébergement | Serveur interne, joignable en HTTPS par les postes | Cloud : non retenu |
+| Hébergement | Poste de l'administrateur : un installeur unique y dépose API, stockage et console web ; joignable en HTTPS par les postes (ADR-004) | Serveur dédié ou cloud : non retenus |
 | Socle | .NET 10 LTS (API, agent, connecteurs), PostgreSQL, React | Rester sur .NET 8 : hors support depuis le 10/11/2026 |
 
 ## Mesures de succès
 
 | Jalon | Critère |
 |---|---|
-| Laboratoire | 100 % des scénarios de la matrice passent, retour arrière compris, sur chaque version de Windows visée |
+| Poste de réserve | 100 % des scénarios de la matrice passent, retour arrière compris, sur un poste de réserve par version de Windows visée |
 | Pilote | 100 % des lignes rapprochées ou en exception explicite ; ≥ 95 % de bascules réussies au premier essai ; 0 poste inutilisable ; chaque échec ramené à l'état initial |
 | Généralisation | Chaque changement relié à un préparateur, un approbateur et une preuve ; durée d'indisponibilité par poste mesurée et publiée |

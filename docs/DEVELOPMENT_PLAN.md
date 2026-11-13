@@ -5,7 +5,7 @@
 
 ## 1. Principe
 
-Chaque incrément est une **tranche verticale** petite, livrée par la même boucle automatique, et n'est fusionnée que si une commande vérifiable passe. Les opérations qui modifient un poste ne sont autorisées qu'après avoir réussi, retour arrière compris, dans un laboratoire à deux forêts reconstruit par script.
+Chaque incrément est une **tranche verticale** petite, livrée par la même boucle automatique, et n'est fusionnée que si une commande vérifiable passe. Les opérations qui modifient un poste ne sont autorisées en pilote qu'après avoir réussi, retour arrière compris, sur un poste de réserve dédié (ADR-004).
 
 Trois niveaux de preuve, du plus rapide au plus réaliste :
 
@@ -13,7 +13,7 @@ Trois niveaux de preuve, du plus rapide au plus réaliste :
 |---|---|---|---|
 | 1. Tests unitaires et de contrat | CI hébergée | Chaque demande de fusion | Logique, contrats, politiques de sécurité |
 | 2. Tests d'intégration sur poste | Machine Windows jetable, hors domaine | Chaque demande de fusion touchant l'agent | Service, profils et registre réels sur comptes locaux synthétiques |
-| 3. Scénarios de bout en bout | Laboratoire Hyper-V, deux forêts | Chaque nuit et avant chaque version | Bascule réelle A → B, profil, retour arrière |
+| 3. Scénarios de bout en bout | Poste de réserve réel, OU de test des vrais domaines | À la demande, et obligatoirement avant chaque version et avant le pilote | Bascule réelle A → B, profil, retour arrière |
 
 ## 2. La boucle automatique (identique pour chaque tranche)
 
@@ -27,22 +27,24 @@ Trois niveaux de preuve, du plus rapide au plus réaliste :
    - recherche de secrets (gitleaks) et analyse des scripts PowerShell (PSScriptAnalyzer)
 4. **Demande de fusion** : la CI rejoue `verify.ps1`, construit le MSI et le paquet Intune, publie les artefacts.
 5. **Revue de sécurité obligatoire** (propriétaires de code) dès qu'un chemin sensible est touché : identité, certificats, jonction, profil, retour arrière — conformément à `AGENTS.md`.
-6. **Fusion**, puis exécution nocturne du niveau 3 ; un échec nocturne ouvre automatiquement un ticket bloquant.
+6. **Fusion**. Le niveau 3 n'est pas automatique : il se joue en campagne sur le poste de réserve, et tout échec ouvre un ticket bloquant.
 7. **Registre des jalons** `GATES.md` : une ligne par jalon, avec la commande et la preuve datée. Aucun jalon coché sans preuve.
 
 Ce plan est conçu pour être exécuté tranche par tranche par un agent de développement, un humain validant les demandes de fusion sensibles et les passages de phase.
 
-## 3. Laboratoire automatisé
+## 3. Banc d'essai : le poste de réserve
 
-Construit et détruit par script (`lab/Build-Lab.ps1`, module AutomatedLab sur Hyper-V), jamais à la main :
+Le laboratoire à deux forêts initialement prévu est abandonné (ADR-004). Les essais qui modifient une machine se font sur un **poste de réserve réel** :
 
-- forêt `lab-a.test` et forêt `lab-b.test`, un contrôleur de domaine chacune, réseau isolé ;
-- un serveur DomainBridge (API, PostgreSQL, connecteurs, autorité de certification de test) ;
-- postes clients : une image Windows 10 22H2 et une image Windows 11 ;
-- identités 100 % synthétiques, générées par script ; comptes ordinateurs et utilisateurs pré-créés dans B pour reproduire l'hypothèse d'entrée ;
-- point de contrôle Hyper-V restauré avant chaque scénario : résultats reproductibles.
+- membre du vrai domaine A, sans utilisateur réel, réinstallable ou restaurable par image ;
+- placé dans une OU de test de A ; son compte ordinateur est déjà créé dans une OU de test de B ;
+- comptes utilisateurs fictifs dans A et dans B ;
+- délégations limitées à ces deux OU ;
+- un poste par version de Windows visée (Windows 11 d'abord, Windows 10 ensuite).
 
-Matrice minimale des scénarios de bout en bout (`lab/scenarios/*.ps1`, exécutés par un agent de CI auto-hébergé) :
+Conséquence assumée : pas d'exécution nocturne. La matrice ci-dessous se joue en campagne, avec remise en état du poste entre deux scénarios.
+
+Matrice minimale des scénarios de bout en bout :
 
 | # | Scénario | Résultat attendu |
 |---|---|---|
@@ -72,13 +74,13 @@ Chaque phase se termine par un jalon vérifiable. Les phases 0 à 3 ne modifient
 | 0.3 | Passage à .NET 10 LTS, `scripts/verify.ps1`, CI durcie, propriétaires de code, remise à plat de `GATES.md` et du README | CI verte sur la nouvelle base |
 | 0.4 | Modèle de menace écrit (agent, API, connecteurs, jeton de jonction) | Revue de sécurité signée |
 
-### Phase 1 — Preuves de faisabilité en laboratoire (code jetable)
+### Phase 1 — Preuves de faisabilité sur poste de réserve (code jetable)
 
 Lever les trois inconnues techniques **avant** de construire quoi que ce soit autour.
 
 | Tranche | Question | Jalon |
 |---|---|---|
-| 1.1 | Laboratoire à deux forêts reconstruit par script | `lab/Build-Lab.ps1` aboutit sans intervention |
+| 1.1 | Poste de réserve, OU de test, comptes fictifs et délégations en place | Liste de prérequis de l'ADR-004 cochée avec l'administrateur AD |
 | 1.2 | La jonction hors ligne fait-elle passer un poste de A vers B en réutilisant le compte existant, sans mot de passe sur le poste ? Quelle séquence exacte ? | Séquence documentée et rejouée 5 fois de suite |
 | 1.3 | Le rattachement de profil sur place donne-t-il une session utilisable, par version de Windows ? Que faut-il réparer (applications modernes, etc.) ? | Liste des corrections nécessaires, par version |
 | 1.4 | Le retour dans A fonctionne-t-il après bascule ? | Séquence de retour documentée |
@@ -94,7 +96,7 @@ Les résultats sont consignés dans des ADR ; le code d'essai n'est pas conserv�
 | 2.3 | Audit complet (acteur, poste, tâche, résultat), chaîné et en ajout seul ; export SIEM | S5, S7 |
 | 2.4 | Persistance PostgreSQL de tout l'état, migrations de schéma versionnées, clés d'idempotence | S6 |
 | 2.5 | Agent en service Windows : boucle de scrutation, journal local, reprise après redémarrage, mise à jour par MSI | P1 |
-| 2.6 | MSI unique signé (certificat de test en laboratoire), paquet Intune et déploiement GPO | P7 |
+| 2.6 | MSI unique signé (certificat de test pour les essais), paquet Intune et déploiement GPO | P7 |
 
 Jalon : scénarios E10 et E12 verts ; aucune route d'API accessible sans identité.
 
@@ -108,11 +110,11 @@ Jalon : scénarios E10 et E12 verts ; aucune route d'API accessible sans identit
 | 3.4 | Précontrôles et verdict par poste, motifs normalisés |
 | 3.5 | Console : import, rapprochement, fiche poste, file des exceptions |
 
-Jalon : sur le laboratoire, 100 % des lignes d'une liste d'essai sont classées prêtes, réservées, bloquées ou en quarantaine ; scénario E8 vert. **Cette phase est déjà utile en production** : elle peut tourner sur le parc réel en lecture seule et révéler l'ampleur des exceptions avant que le moteur n'existe.
+Jalon : sur une liste d'essai, 100 % des lignes d'une liste d'essai sont classées prêtes, réservées, bloquées ou en quarantaine ; scénario E8 vert. **Cette phase est déjà utile en production** : elle peut tourner sur le parc réel en lecture seule et révéler l'ampleur des exceptions avant que le moteur n'existe.
 
-### Phase 4 — Moteur de migration (laboratoire uniquement)
+### Phase 4 — Moteur de migration (poste de réserve uniquement)
 
-Verrou logiciel : les étapes modifiantes ne s'exécutent que si l'API est configurée « laboratoire » et le poste dans une liste d'autorisation.
+Verrou logiciel : les étapes modifiantes ne s'exécutent que sur un poste dont le nom figure dans une liste d'autorisation et dont le compte ordinateur est dans l'OU de test.
 
 | Tranche | Contenu | Scénarios |
 |---|---|---|
@@ -123,7 +125,7 @@ Verrou logiciel : les étapes modifiantes ne s'exécutent que si l'API est confi
 | 4.5 | Phase *Valider* et corrections après bascule (BitLocker, applications modernes) | E11 |
 | 4.6 | Retour arrière automatique et à la demande | E6, E7 |
 
-Jalon : matrice E1–E12 verte trois nuits consécutives sur chaque version de Windows visée.
+Jalon : matrice E1–E12 verte lors de deux campagnes consécutives sur chaque version de Windows visée.
 
 ### Phase 5 — Campagnes
 
@@ -134,7 +136,7 @@ Jalon : matrice E1–E12 verte trois nuits consécutives sur chaque version de W
 | 5.3 | Tableau de bord de vague, fiche de preuve par poste, exports |
 | 5.4 | Essai de charge : 1 000 agents simulés |
 
-Jalon : une vague de laboratoire complète, approuvée par deux identités distinctes, avec un échec provoqué ramené à l'état initial.
+Jalon : une vague d'essai complète sur les postes de réserve, approuvée par deux identités distinctes, avec un échec provoqué ramené à l'état initial.
 
 ### Phase 6 — Durcissement et mise en production
 
