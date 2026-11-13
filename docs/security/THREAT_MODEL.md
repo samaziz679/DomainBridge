@@ -118,9 +118,9 @@ C'est la zone la plus exposée aux élévations de privilèges, car l'agent mani
 
 | # | Cat. | Scénario | Parade exigée | Tranche | État |
 |---|---|---|---|---|---|
-| T22 | R | Un opérateur nie une action, ou un administrateur de la base efface ses traces | Événement complet (acteur, poste, tâche, résultat) ; ajout seul ; compte applicatif sans droit de modification ni de suppression ; chaînage par empreinte ; export continu vers le SIEM | 2.3 | ouvert (S5, S7) |
-| T23 | A, I | Perte de l'état des vagues au redémarrage du serveur, provoquant des postes à moitié migrés et « oubliés » | Tout l'état en base ; l'agent reste maître de sa propre reprise même sans serveur | 2.4, 4.1 | ouvert (S6) |
-| T24 | D | Fuite de la base (comptes, noms de postes) | Chiffrement au repos et en transit ; aucun secret en base ; sauvegardes protégées | 6.4 | à concevoir |
+| T22 | R | Un opérateur nie une action, ou un administrateur de la base efface ses traces | Événement complet (acteur, poste, tâche, résultat) ; ajout seul imposé par la base elle-même ; chaînage par empreinte ; export continu vers le SIEM, seul moyen de détecter une réécriture complète du fichier (ADR-006) | 2.3 | en place, sauf export SIEM |
+| T23 | A, I | Perte de l'état des vagues au redémarrage du serveur, provoquant des postes à moitié migrés et « oubliés » | Tout l'état en base ; l'agent reste maître de sa propre reprise même sans serveur | 2.4, 4.1 | en place pour l'audit et l'inventaire |
+| T24 | D | Fuite de la base (comptes, noms de postes) | Disque du poste de l'administrateur chiffré ; dossier de la base réservé au service et aux administrateurs ; aucun secret en base ; sauvegardes protégées | 2.6, 6.4 | à concevoir |
 
 ### 5.7 Disponibilité et retour arrière
 

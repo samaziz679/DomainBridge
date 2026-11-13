@@ -139,7 +139,7 @@ public sealed class AgentIdentityEndpointTests : IClassFixture<WebApplicationFac
         using var production = new WebApplicationFactory<Program>().WithWebHostBuilder(host =>
         {
             host.UseEnvironment("Production");
-            host.UseSetting("ConnectionStrings:Audit", "Host=unused.invalid;Database=unused");
+            host.UseSetting("Storage:DatabasePath", Path.Combine(Path.GetTempPath(), "domainbridge-start-" + Guid.NewGuid().ToString("N"), "db.sqlite"));
             host.UseSetting("OperatorAccess:ReaderGroupSids:0", "S-1-5-21-1111111111-1111111111-1111111111-2001");
         });
 

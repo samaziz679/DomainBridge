@@ -64,3 +64,4 @@ Interdit :
 - Socle porté de .NET 8 à **.NET 10 LTS** : .NET 8 est sorti du support le 10 novembre 2026.
 - La console opérateur est une application web unique ; le client de bureau a été retiré (ADR-003, D4).
 - Le catalogue de remédiations et les actions technicien ont été retirés du produit (périmètre v2).
+- PostgreSQL est remplacé par un stockage embarqué SQLite (ADR-006) ; l'authentification des opérateurs passe par la session Windows (ADR-005).

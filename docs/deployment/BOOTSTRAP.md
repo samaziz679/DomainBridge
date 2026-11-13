@@ -14,10 +14,4 @@ To allow installation of a missing local prerequisite:
 
 ## External systems
 
-PKI, PostgreSQL, Intune and Active Directory are never auto-installed or auto-configured by DomainBridge. They represent organisation-owned security boundaries and require explicit infrastructure configuration.
-
-Validate a completed non-secret pilot configuration:
-
-    powershell.exe -ExecutionPolicy Bypass -File deployment\bootstrap\Test-ExternalConnectors.ps1 -PilotConfigurationPath C:\Secure\pilot.env
-
-This validates configuration structure only. It does not contact the listed systems or make a change.
+PKI, Intune and Active Directory are never auto-installed or auto-configured by DomainBridge. They represent organisation-owned security boundaries and require explicit infrastructure configuration.

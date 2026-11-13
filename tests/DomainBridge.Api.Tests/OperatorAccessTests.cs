@@ -148,7 +148,7 @@ public sealed class OperatorAccessTests : IClassFixture<WebApplicationFactory<Pr
         using var production = new WebApplicationFactory<Program>().WithWebHostBuilder(host =>
         {
             host.UseEnvironment("Production");
-            host.UseSetting("ConnectionStrings:Audit", "Host=unused.invalid;Database=unused");
+            host.UseSetting("Storage:DatabasePath", Path.Combine(Path.GetTempPath(), "domainbridge-start-" + Guid.NewGuid().ToString("N"), "db.sqlite"));
             host.UseSetting("AgentIdentity:TrustedIssuerThumbprints:0", new string('A', 40));
         });
 

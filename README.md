@@ -33,7 +33,7 @@ Le dépôt contient le socle de contrôle : enrôlement et inventaire technique 
 | `src/DomainBridge.DirectoryConnector` | Connecteur d'annuaire (aujourd'hui : simulation) |
 | `apps/DomainBridge.Console` | Console web des opérateurs |
 | `installer/TestLab` | Installeur MSI de laboratoire, non signé |
-| `deployment/` | Scripts de paquet Intune, de déploiement GPO et de base de données |
+| `deployment/` | Scripts de paquet Intune et de déploiement GPO |
 
 ## Vérifier
 

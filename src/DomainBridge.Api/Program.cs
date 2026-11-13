@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Options;
-using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 var isDevelopmentOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
@@ -29,21 +28,20 @@ if (agentTransportRequired)
         }));
 }
 
-var auditConnectionString = builder.Configuration.GetConnectionString("Audit");
-var auditStorageMode = AuditStorageSelector.Select(
-    isDevelopmentOrTest,
-    auditConnectionString);
-
-if (auditStorageMode == AuditStorageMode.Postgres)
-{
-    builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(auditConnectionString!));
-    builder.Services.AddSingleton<IAuditStore, PostgresAuditStore>();
-    builder.Services.AddSingleton<IInventoryStore, PostgresInventoryStore>();
-}
-else
+var storage = builder.Configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>() ?? new();
+var databasePath = StorageSelector.ResolveDatabasePath(isDevelopmentOrTest, storage);
+if (databasePath is null)
 {
     builder.Services.AddSingleton<IAuditStore, InMemoryAuditStore>();
     builder.Services.AddSingleton<IInventoryStore, InMemoryInventoryStore>();
+}
+else
+{
+    var database = new SqliteDatabase(databasePath);
+    database.Initialize();
+    builder.Services.AddSingleton(database);
+    builder.Services.AddSingleton<IAuditStore, SqliteAuditStore>();
+    builder.Services.AddSingleton<IInventoryStore, SqliteInventoryStore>();
 }
 
 builder.Services.Configure<OperatorAccessOptions>(builder.Configuration.GetSection(OperatorAccessOptions.SectionName));

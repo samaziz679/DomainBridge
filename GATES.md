@@ -23,7 +23,6 @@ Un jalon n'est coché qu'avec une commande rejouable et une preuve datée. Plan 
 
 ## Écarts connus, à ne pas perdre de vue
 
-- Les magasins PostgreSQL (`PostgresAuditStore`, `PostgresInventoryStore`) ne sont couverts par aucun test : exclus du seuil de couverture jusqu'aux tests d'intégration de la tranche 2.4.
 - Les constats de sécurité S3 à S7 de l'audit restent ouverts (phase 2). S1 et S2 ont disparu avec le code retiré, mais l'API n'a toujours aucune authentification d'opérateur.
 
 ## Phase 1 — Preuves de faisabilité sur poste de réserve
@@ -53,11 +52,15 @@ Décision : `docs/adr/ADR-004-poste-admin-et-poste-de-reserve.md`. Protocole : `
   PREUVE : 2026-11-13 — 15 tests : identité lue dans le certificat, autorité épinglée, certificat auto-signé refusé, usurpation d'un autre poste refusée en 403 et tracée, démarrage refusé en production sans autorité épinglée.
   RESTE : procédure d'enrôlement (menace T2) et contrôle de révocation.
 
-- [ ] **2.3 — Audit complet et chaîné** (constats S5 et S7, menace T22).
-  CHECK : `dotnet test DomainBridge.sln -c Release --filter "AuditChain"`
-  PREUVE PARTIELLE : 2026-11-13 — acteur, résultat et tâche dans chaque événement ; chaînage par empreinte ; modification, suppression et réordonnancement détectés (9 tests).
-  RESTE : la migration `deployment/postgres/003_audit_chain.sql` et le magasin PostgreSQL ne sont **pas exécutés** (aucune base disponible) ; export SIEM ; acteur humain, qui dépend de 2.1.
+- [x] **2.3 — Audit complet et chaîné** (constats S5 et S7, menace T22).
+  CHECK : `dotnet test DomainBridge.sln -c Release --filter "AuditChain|SqliteStorage"`
+  PREUVE : 2026-11-13 — acteur, résultat et tâche dans chaque événement ; chaînage par empreinte ; modification, suppression et réordonnancement détectés ; la base refuse elle-même UPDATE et DELETE.
+  RESTE : export SIEM ; acteur humain sur les actions d'opérateur, à poser avec la première route modifiante.
 
-- [ ] **2.4 — Persistance de tout l'état.** Non commencé : choix du stockage à confirmer (ADR-004).
+- [x] **2.4 — Persistance de tout l'état** (ADR-006, constat S6, menace T23).
+  CHECK : `dotnet test DomainBridge.sln -c Release --filter "SqliteStorage"`
+  PREUVE : 2026-11-13 — 9 tests sur une vraie base SQLite : audit et inventaire survivent au redémarrage de l'API, migrations rejouables, base plus récente refusée, événement en double enregistré une fois, 40 écritures simultanées sans rupture de chaîne. Code PostgreSQL, jamais exécuté, retiré.
+  RESTE : droits sur le dossier de la base (installeur du serveur) ; procédure de sauvegarde (tranche 6.4).
+
 - [ ] **2.5 — Agent en service Windows.** Non commencé.
 - [ ] **2.6 — MSI unique signé.** Non commencé.

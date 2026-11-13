@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using Npgsql;
 
 /// <summary>
 /// One immutable fact: who did what, to which subject, with which outcome.
@@ -138,8 +137,16 @@ public sealed class InMemoryAuditStore : IAuditStore
 
     public void Append(AuditEvent auditEvent)
     {
+        ArgumentNullException.ThrowIfNull(auditEvent);
+
         lock (_gate)
         {
+            if (_events.Exists(existing => existing.EventId == auditEvent.EventId))
+            {
+                // Same event delivered twice: recording it once is the correct outcome.
+                return;
+            }
+
             _events.Add(AuditChain.Seal(auditEvent, _events.Count == 0 ? null : _events[^1].Hash));
         }
     }
@@ -150,129 +157,5 @@ public sealed class InMemoryAuditStore : IAuditStore
         {
             return _events.AsEnumerable().Reverse().Take(limit).ToArray();
         }
-    }
-}
-
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(Justification = "Requires a PostgreSQL instance; to be covered by integration tests in tranche 2.4.")]
-public sealed class PostgresAuditStore(NpgsqlDataSource dataSource) : IAuditStore
-{
-    private const string Columns =
-        "event_id, occurred_at_utc, action, subject_id, actor, outcome, task_id, previous_hash, hash";
-
-    public IReadOnlyCollection<AuditEvent> Events =>
-        Read($"SELECT {Columns} FROM audit_events ORDER BY sequence ASC;", null);
-
-    public int Count
-    {
-        get
-        {
-            using var connection = dataSource.OpenConnection();
-            using var command = connection.CreateCommand();
-            command.CommandText = "SELECT COUNT(*) FROM audit_events;";
-            return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
-        }
-    }
-
-    public void Append(AuditEvent auditEvent)
-    {
-        using var connection = dataSource.OpenConnection();
-        using var transaction = connection.BeginTransaction();
-
-        // One writer at a time: the chain needs a single, unambiguous predecessor.
-        using (var guard = connection.CreateCommand())
-        {
-            guard.Transaction = transaction;
-            guard.CommandText = "LOCK TABLE audit_events IN SHARE ROW EXCLUSIVE MODE;";
-            guard.ExecuteNonQuery();
-        }
-
-        string? previousHash;
-        using (var last = connection.CreateCommand())
-        {
-            last.Transaction = transaction;
-            last.CommandText = "SELECT hash FROM audit_events ORDER BY sequence DESC LIMIT 1;";
-            previousHash = last.ExecuteScalar() as string;
-        }
-
-        var stored = AuditChain.Seal(auditEvent, previousHash);
-        using (var insert = connection.CreateCommand())
-        {
-            insert.Transaction = transaction;
-            insert.CommandText = $"""
-                INSERT INTO audit_events ({Columns})
-                VALUES (@event_id, @occurred_at_utc, @action, @subject_id, @actor, @outcome, @task_id, @previous_hash, @hash);
-                """;
-            insert.Parameters.AddWithValue("event_id", stored.EventId);
-            insert.Parameters.AddWithValue("occurred_at_utc", stored.OccurredAtUtc);
-            insert.Parameters.AddWithValue("action", stored.Action);
-            insert.Parameters.AddWithValue("subject_id", stored.SubjectId);
-            insert.Parameters.AddWithValue("actor", stored.Actor);
-            insert.Parameters.AddWithValue("outcome", stored.Outcome);
-            insert.Parameters.AddWithValue("task_id", (object?)stored.TaskId ?? DBNull.Value);
-            insert.Parameters.AddWithValue("previous_hash", (object?)stored.PreviousHash ?? DBNull.Value);
-            insert.Parameters.AddWithValue("hash", stored.Hash!);
-            insert.ExecuteNonQuery();
-        }
-
-        transaction.Commit();
-    }
-
-    public IReadOnlyCollection<AuditEvent> GetRecent(int limit) =>
-        Read($"SELECT {Columns} FROM audit_events ORDER BY sequence DESC LIMIT @limit;", limit);
-
-    private AuditEvent[] Read(string sql, int? limit)
-    {
-        using var connection = dataSource.OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText = sql;
-        if (limit.HasValue)
-        {
-            command.Parameters.AddWithValue("limit", limit.Value);
-        }
-
-        using var reader = command.ExecuteReader();
-        var events = new List<AuditEvent>();
-        while (reader.Read())
-        {
-            events.Add(new AuditEvent(
-                reader.GetGuid(0),
-                reader.GetFieldValue<DateTimeOffset>(1),
-                reader.GetString(2),
-                reader.GetString(3),
-                reader.GetString(4),
-                reader.GetString(5),
-                reader.IsDBNull(6) ? null : reader.GetString(6),
-                reader.IsDBNull(7) ? null : reader.GetString(7),
-                reader.IsDBNull(8) ? null : reader.GetString(8)));
-        }
-
-        return [.. events];
-    }
-}
-
-public enum AuditStorageMode
-{
-    InMemory = 0,
-    Postgres
-}
-
-public static class AuditStorageSelector
-{
-    public static AuditStorageMode Select(
-        bool isDevelopmentOrTest,
-        string? auditConnectionString)
-    {
-        if (!string.IsNullOrWhiteSpace(auditConnectionString))
-        {
-            return AuditStorageMode.Postgres;
-        }
-
-        if (isDevelopmentOrTest)
-        {
-            return AuditStorageMode.InMemory;
-        }
-
-        throw new InvalidOperationException(
-            "A durable ConnectionStrings:Audit PostgreSQL connection is required outside development and test.");
     }
 }

@@ -94,7 +94,7 @@ Les résultats sont consignés dans des ADR ; le code d'essai n'est pas conserv�
 | 2.1 | Authentification des opérateurs par session Windows et groupes AD (ADR-005), rôles Préparateur / Approbateur / Technicien / Lecteur appliqués sur chaque point d'API | S1, S2 |
 | 2.2 | Identité d'agent lue dans le certificat, émetteur épinglé, autorité dédiée DomainBridge, enrôlement et renouvellement | S3, S4 |
 | 2.3 | Audit complet (acteur, poste, tâche, résultat), chaîné et en ajout seul ; export SIEM | S5, S7 |
-| 2.4 | Persistance PostgreSQL de tout l'état, migrations de schéma versionnées, clés d'idempotence | S6 |
+| 2.4 | Persistance de tout l'état dans une base embarquée SQLite (ADR-006), migrations de schéma versionnées, clés d'idempotence | S6 |
 | 2.5 | Agent en service Windows : boucle de scrutation, journal local, reprise après redémarrage, mise à jour par MSI | P1 |
 | 2.6 | MSI unique signé (certificat de test pour les essais), paquet Intune et déploiement GPO | P7 |
 

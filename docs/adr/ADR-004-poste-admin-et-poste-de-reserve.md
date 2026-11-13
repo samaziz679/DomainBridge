@@ -29,7 +29,7 @@ La faisabilité (phase 1) puis le moteur (phase 4) sont éprouvés sur une machi
 - Il doit rester allumé et joignable pendant une vague. S'il s'arrête, les agents poursuivent ou annulent seuls leur étape en cours (menace T25) et rendent compte à son retour.
 - Il porte un certificat serveur et, à terme, l'accès aux connecteurs d'annuaire. Sa compromission équivaut à celle du serveur (acteur M5 du modèle de menace) : chiffrement du disque, session verrouillée, compte d'administration dédié.
 - Il migre lui-même **en dernier**, hors vague automatique.
-- Stockage *(proposition, à confirmer en tranche 2.4)* : une base embarquée dans l'installeur plutôt que PostgreSQL, trop lourd à installer et à exploiter sur un poste de travail pour 200 à 1 000 postes. L'abstraction de stockage existante est conservée ; PostgreSQL reste possible pour un hébergement sur serveur.
+- Stockage *(confirmé par l'ADR-006)* : une base embarquée dans l'installeur plutôt que PostgreSQL, trop lourd à installer et à exploiter sur un poste de travail pour 200 à 1 000 postes. L'abstraction de stockage existante est conservée ; PostgreSQL reste possible pour un hébergement sur serveur.
 
 ### Sur les essais
 
