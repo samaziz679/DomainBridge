@@ -500,7 +500,7 @@
       "domainbridge.api": {
         "type": "Project",
         "dependencies": {
-          "DomainBridge.Contracts": "[1.0.0, )",
+          "DomainBridge.Contracts": "[0.3.0, )",
           "Microsoft.AspNetCore.Authentication.Negotiate": "[10.0.15, )",
           "Microsoft.Data.Sqlite": "[10.0.15, )"
         }
