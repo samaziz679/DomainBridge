@@ -43,7 +43,10 @@ Décision : `docs/adr/ADR-004-poste-admin-et-poste-de-reserve.md`. Protocole : `
 
 ## Phase 2 — Socle de confiance
 
-- [ ] **2.1 — Authentification et rôles des opérateurs.** Non commencé : dépend du choix du mode d'authentification sur un poste d'administrateur.
+- [x] **2.1 — Authentification et rôles des opérateurs** (ADR-005, menace T18).
+  CHECK : `dotnet test DomainBridge.sln -c Release --filter "OperatorAccess"`
+  PREUVE : 2026-11-13 — 15 tests : routes de console refusées sans identité (401) ou sans groupe (403), rôles issus des seuls groupes configurés, rôle fourni par l'appelant ignoré, routes d'agent indépendantes, démarrage refusé en production sans groupe. Essai réel de l'authentification Windows sur l'API lancée localement : 401 avec défi Negotiate sans identité, 200 et rôle Lecteur avec la session Windows.
+  RESTE : essai Kerberos entre deux machines d'un domaine (seul NTLM local a été éprouvé) ; protection anti-falsification, à poser avec la première route modifiante.
 
 - [x] **2.2 — Identité d'agent liée au certificat** (constats S3 et S4, menace T1).
   CHECK : `dotnet test DomainBridge.sln -c Release --filter "AgentIdentity"`

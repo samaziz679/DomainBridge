@@ -45,7 +45,7 @@ Hors modèle : un attaquant déjà administrateur du domaine A ou B (il n'a pas 
 ## 4. Frontières de confiance et flux
 
 ```text
- Opérateur (navigateur) ──OIDC Entra + rôles──► API centrale ◄──mTLS, sortant──── Agent (compte système)
+ Opérateur (navigateur) ─session Windows + groupes AD─► API centrale ◄──mTLS, sortant──── Agent (compte système)
                                                  │      │                              │
                                               PostgreSQL│                         poste : profils,
                                                         │                         registre, domaine
@@ -109,10 +109,10 @@ C'est la zone la plus exposée aux élévations de privilèges, car l'agent mani
 
 | # | Cat. | Scénario | Parade exigée | Tranche | État |
 |---|---|---|---|---|---|
-| T18 | U, E | Accès à l'API sans identité, ou avec un rôle insuffisant | Authentification Entra ID avec MFA sur chaque route ; rôles vérifiés côté serveur ; en production, l'API refuse de démarrer si l'authentification n'est pas configurée | 2.1 | ouvert |
+| T18 | U, E | Accès à l'API sans identité, ou avec un rôle insuffisant | Session Windows sur chaque route de console ; rôles issus de groupes AD désignés par SID, vérifiés côté serveur ; en production, l'API refuse de démarrer sans groupe configuré (ADR-005) | 2.1 | en place |
 | T19 | E | Un seul compte (M4) prépare et approuve sa propre vague | Le préparateur ne peut pas approuver ; les deux identités figurent dans l'audit ; vérifié côté serveur | 5.2 | à concevoir |
 | T20 | I | Un compte compromis lance une vague sur tout le parc | Plafond de postes par vague et de simultanéité ; fenêtre de maintenance imposée ; seuil d'arrêt automatique sur taux d'échec ; arrêt d'urgence | 5.1, 5.2 | à concevoir |
-| T21 | A | Attaques web classiques sur la console (script injecté, requête forgée) | Jetons portés en en-tête et non en cookie ; politique de sécurité de contenu ; aucun rendu de HTML issu des données | 2.1, 3.5 | à concevoir |
+| T21 | A | Attaques web classiques sur la console (script injecté, requête forgée) | L'authentification Windows est ambiante : toute route modifiante exige un en-tête anti-falsification et un contrôle d'origine ; politique de sécurité de contenu ; aucun rendu de HTML issu des données | 2.1, 3.5 | à concevoir |
 
 ### 5.6 Audit et données (F5, B5)
 
@@ -162,7 +162,7 @@ Après la phase 0, le code ne contient **aucune action modifiante**, ce qui born
 |---|---|---|
 | T1 | S3, S4 | Identité d'agent non liée au certificat ; émetteur non épinglé |
 | T2 | — | Pas de procédure d'enrôlement vérifiée |
-| T18 | (ex-S1, S2) | Aucune authentification d'opérateur ; les lectures de console ne sont ouvertes qu'en mode développement, que l'installeur de laboratoire utilise sur 127.0.0.1 |
+| T18 | (ex-S1, S2) | Traité en tranche 2.1. Reste : l'installeur de laboratoire lance encore l'API en mode développement, sans authentification, sur 127.0.0.1 |
 | T22 | S5, S7 | Événement d'audit sans acteur ; immutabilité non appliquée |
 | T23 | S6 | État non persistant hors audit et inventaire |
 | T29 | — | Actions de CI référencées par étiquette et non par empreinte |

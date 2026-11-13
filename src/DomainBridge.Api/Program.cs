@@ -1,19 +1,22 @@
 using System.Text.Json;
 using DomainBridge.Contracts;
 using System.Net.Security;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Options;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
-var consoleAccess = builder.Configuration.GetSection(ConsoleAccessOptions.SectionName).Get<ConsoleAccessOptions>() ?? new();
-var entraAuthentication = builder.Configuration.GetSection(EntraAuthenticationOptions.SectionName).Get<EntraAuthenticationOptions>() ?? new();
-var agentTransportRequired =
-    !(builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"));
-var consoleReadApiEnabled =
-    builder.Environment.IsDevelopment() ||
-    builder.Environment.IsEnvironment("Testing") ||
-    consoleAccess.IsReady();
+var isDevelopmentOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
+var agentTransportRequired = !isDevelopmentOrTest;
+var operatorAccess = builder.Configuration.GetSection(OperatorAccessOptions.SectionName).Get<OperatorAccessOptions>() ?? new();
+var operatorAccessRequired = !isDevelopmentOrTest || operatorAccess.Enforce;
+if (operatorAccessRequired && (!operatorAccess.HasAnyGroup() || operatorAccess.InvalidEntries().Count > 0))
+{
+    throw new InvalidOperationException(
+        "OperatorAccess must list at least one group, and every group must be a security identifier (S-1-...).");
+}
 
 if (agentTransportRequired)
 {
@@ -28,7 +31,7 @@ if (agentTransportRequired)
 
 var auditConnectionString = builder.Configuration.GetConnectionString("Audit");
 var auditStorageMode = AuditStorageSelector.Select(
-    builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"),
+    isDevelopmentOrTest,
     auditConnectionString);
 
 if (auditStorageMode == AuditStorageMode.Postgres)
@@ -43,7 +46,33 @@ else
     builder.Services.AddSingleton<IInventoryStore, InMemoryInventoryStore>();
 }
 
-builder.Services.AddSingleton(entraAuthentication);
+builder.Services.Configure<OperatorAccessOptions>(builder.Configuration.GetSection(OperatorAccessOptions.SectionName));
+if (operatorAccessRequired)
+{
+    // Operators sign in with their Windows session; roles come from Active Directory groups.
+    builder.Services.AddTransient<IClaimsTransformation, OperatorRoleClaimsTransformation>();
+    var authentication = builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme);
+    if (!builder.Environment.IsEnvironment("Testing"))
+    {
+        // The in-memory test server cannot carry Windows authentication; tests register
+        // a stand-in scheme. With no scheme at all, protected routes fail closed.
+        authentication.AddNegotiate();
+    }
+    builder.Services.AddAuthorizationBuilder()
+        .AddPolicy(OperatorPolicies.Read, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireClaim(OperatorRoles.ClaimType, OperatorRoles.All))
+        .AddPolicy(OperatorPolicies.Prepare, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireClaim(OperatorRoles.ClaimType, OperatorRoles.Preparer))
+        .AddPolicy(OperatorPolicies.Approve, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireClaim(OperatorRoles.ClaimType, OperatorRoles.Approver))
+        .AddPolicy(OperatorPolicies.Technician, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireClaim(OperatorRoles.ClaimType, OperatorRoles.Technician));
+}
+
 builder.Services.Configure<AgentIdentityOptions>(builder.Configuration.GetSection(AgentIdentityOptions.SectionName));
 builder.Services.AddSingleton<IAgentIssuerChainReader>(_ => new X509AgentIssuerChainReader());
 
@@ -80,12 +109,28 @@ IResult RejectIdentityMismatch(IAuditStore auditStore, AgentIdentityResult calle
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
+if (operatorAccessRequired)
+{
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-if (consoleReadApiEnabled)
+var console = app.MapGroup("/api/v1/console");
+if (operatorAccessRequired)
 {
-    app.MapGet("/api/v1/console/overview", (IAuditStore auditStore, IInventoryStore inventoryStore) =>
+    console.RequireAuthorization(OperatorPolicies.Read);
+}
+
+{
+    console.MapGet("/me", (HttpContext context) => Results.Ok(new
+    {
+        name = context.User.Identity?.Name ?? "anonymous",
+        roles = context.User.FindAll(OperatorRoles.ClaimType).Select(claim => claim.Value).Distinct().ToArray()
+    }));
+
+    console.MapGet("/overview", (IAuditStore auditStore, IInventoryStore inventoryStore) =>
     {
         var recentAudit = auditStore.GetRecent(1).FirstOrDefault();
         return Results.Ok(new
@@ -97,7 +142,7 @@ if (consoleReadApiEnabled)
         });
     });
 
-    app.MapGet("/api/v1/console/agents", (int? limit, IInventoryStore inventoryStore) =>
+    console.MapGet("/agents", (int? limit, IInventoryStore inventoryStore) =>
     {
         if (!ConsoleQuery.IsValidLimit(limit))
         {
@@ -107,7 +152,7 @@ if (consoleReadApiEnabled)
         return Results.Ok(inventoryStore.GetRecent(ConsoleQuery.ResolveLimit(limit)));
     });
 
-    app.MapGet("/api/v1/console/audit", (int? limit, IAuditStore auditStore) =>
+    console.MapGet("/audit", (int? limit, IAuditStore auditStore) =>
     {
         if (!ConsoleQuery.IsValidLimit(limit))
         {

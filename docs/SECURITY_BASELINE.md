@@ -2,7 +2,7 @@
 
 ## Trust boundaries
 
-1. Administrators authenticate to the console through Microsoft Entra ID with MFA and role-based access.
+1. Operators authenticate to the console with their Windows session; roles come from Active Directory groups named by SID (ADR-005). Only dedicated administration accounts belong to those groups.
 2. A Windows agent establishes only outbound TLS connections to the control plane.
 3. Each agent uses a unique device certificate; its private key should be TPM-protected where available.
 4. The directory connector runs in the target environment under a gMSA or equivalent managed identity with permissions delegated only to the migration OU.

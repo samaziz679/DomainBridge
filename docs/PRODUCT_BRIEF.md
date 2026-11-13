@@ -122,7 +122,7 @@ Ne suivent **pas** le profil, par conception (ce sont des secrets liés à l'anc
 |---|---|---|
 | Changement de domaine | Jonction hors ligne, jeton chiffré par poste, connecteur B sous gMSA délégué | Compte de jonction avec mot de passe sur le poste : contraire aux règles de sécurité |
 | Profil | Moteur natif dans l'agent, sur API Windows documentées, sans rétro-ingénierie d'outil tiers | ProfWiz : licence par poste et boîte noire difficile à auditer. USMT : copie complète, lent, double l'espace disque |
-| Console | Web unique servie par l'API, Entra ID + rôles | Client WPF local : mono-opérateur, incompatible avec la double approbation |
+| Console | Web unique servie par l'API ; session Windows et rôles par groupes AD (ADR-005) | Client WPF local : mono-opérateur, incompatible avec la double approbation |
 | Hébergement | Poste de l'administrateur : un installeur unique y dépose API, stockage et console web ; joignable en HTTPS par les postes (ADR-004) | Serveur dédié ou cloud : non retenus |
 | Socle | .NET 10 LTS (API, agent, connecteurs), PostgreSQL, React | Rester sur .NET 8 : hors support depuis le 10/11/2026 |
 

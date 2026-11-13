@@ -140,6 +140,7 @@ public sealed class AgentIdentityEndpointTests : IClassFixture<WebApplicationFac
         {
             host.UseEnvironment("Production");
             host.UseSetting("ConnectionStrings:Audit", "Host=unused.invalid;Database=unused");
+            host.UseSetting("OperatorAccess:ReaderGroupSids:0", "S-1-5-21-1111111111-1111111111-1111111111-2001");
         });
 
         var failure = Assert.ThrowsAny<Exception>(() => production.CreateClient());
