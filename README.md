@@ -32,6 +32,7 @@ Le dépôt contient le socle de contrôle : enrôlement et inventaire technique 
 | `src/DomainBridge.Contracts` | Contrats partagés API / agent |
 | `src/DomainBridge.DirectoryConnector` | Connecteur d'annuaire (aujourd'hui : simulation) |
 | `apps/DomainBridge.Console` | Console web des opérateurs |
+| `installer/Agent` | MSI unique de l'agent, livré par Intune et par GPO |
 | `installer/TestLab` | Installeur MSI de laboratoire, non signé |
 | `deployment/` | Scripts de paquet Intune et de déploiement GPO |
 

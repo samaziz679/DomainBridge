@@ -86,7 +86,10 @@ public enum InventoryCycleOutcome
 {
     Accepted = 0,
     Rejected,
-    Unreachable
+    Unreachable,
+
+    /// <summary>The server address or the machine certificate is not available yet.</summary>
+    NotReady
 }
 
 public interface IInventoryCycle
@@ -121,6 +124,24 @@ public sealed class InventoryCycle(InventorySubmissionClient client, string agen
             // A request timeout, not a service stop.
             return InventoryCycleOutcome.Unreachable;
         }
+    }
+}
+
+/// <summary>
+/// Waits for what the agent needs before it can talk to the server. Settings and
+/// the machine certificate can arrive after installation (an Intune certificate
+/// profile, for instance), so their absence is a reason to retry, never to stop.
+/// </summary>
+public sealed class ReadinessAwareCycle(Func<IInventoryCycle?> tryCreate) : IInventoryCycle
+{
+    private IInventoryCycle? _ready;
+
+    public Task<InventoryCycleOutcome> RunOnceAsync(CancellationToken cancellationToken)
+    {
+        _ready ??= tryCreate();
+        return _ready is null
+            ? Task.FromResult(InventoryCycleOutcome.NotReady)
+            : _ready.RunOnceAsync(cancellationToken);
     }
 }
 

@@ -1,0 +1,65 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <!--
+    DomainBridge agent: the single package delivered by Intune and by GPO.
+    The package contains no secret. SERVERURL is the HTTPS address of the DomainBridge
+    server; the machine certificate is delivered separately and never packaged.
+  -->
+  <Package
+    Name="DomainBridge Agent"
+    Manufacturer="DomainBridge"
+    Version="$(var.ProductVersion)"
+    UpgradeCode="{6B0F6B43-7C0B-4E0E-9B5C-2D4D0E6A9F11}"
+    Language="1033"
+    Scope="perMachine">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of the DomainBridge agent is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- Keep the server address across upgrades unless a new one is given on the command line. -->
+    <Property Id="SERVERURL" Secure="yes" />
+    <Property Id="SAVEDSERVERURL">
+      <RegistrySearch Id="SavedServerUrlSearch" Root="HKLM" Key="SOFTWARE\DomainBridge\Agent" Name="ServerUrl" Type="raw" />
+    </Property>
+    <SetProperty Id="SERVERURL" Value="[SAVEDSERVERURL]" After="AppSearch" Sequence="first" Condition="NOT SERVERURL AND SAVEDSERVERURL" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="DomainBridgeFolder" Name="DomainBridge">
+        <Directory Id="INSTALLFOLDER" Name="Agent" />
+      </Directory>
+    </StandardDirectory>
+
+    <ComponentGroup Id="AgentComponents" Directory="INSTALLFOLDER">
+      <Component Id="AgentServiceComponent" Guid="{0E1D7B0C-5E0B-4B0F-8D53-6E7C5A2B9C21}">
+        <File Id="AgentExecutable" Source="$(var.AgentPublishDir)\DomainBridge.Agent.exe" KeyPath="yes" />
+        <ServiceInstall
+          Id="AgentServiceInstall"
+          Name="DomainBridgeAgent"
+          DisplayName="DomainBridge Agent"
+          Description="Reports this computer to the DomainBridge migration console over outbound HTTPS."
+          Type="ownProcess"
+          Start="auto"
+          Account="LocalSystem"
+          ErrorControl="normal"
+          Vital="yes" />
+        <ServiceControl
+          Id="AgentServiceControl"
+          Name="DomainBridgeAgent"
+          Start="install"
+          Stop="both"
+          Remove="uninstall"
+          Wait="yes" />
+      </Component>
+
+      <Component Id="AgentSettingsComponent" Guid="{3C8A5F2E-91D4-4B6A-A1E7-0F4B7D6C2A31}">
+        <RegistryKey Root="HKLM" Key="SOFTWARE\DomainBridge\Agent">
+          <RegistryValue Name="Version" Type="string" Value="$(var.ProductVersion)" KeyPath="yes" />
+          <RegistryValue Name="ServerUrl" Type="string" Value="[SERVERURL]" />
+        </RegistryKey>
+      </Component>
+    </ComponentGroup>
+
+    <Feature Id="AgentFeature" Title="DomainBridge Agent" Level="1">
+      <ComponentGroupRef Id="AgentComponents" />
+    </Feature>
+  </Package>
+</Wix>

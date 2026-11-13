@@ -24,15 +24,23 @@ jobs:
       - name: Verify
         shell: pwsh
         run: ./scripts/verify.ps1
+      - name: Build agent package (unsigned)
+        shell: pwsh
+        run: ./installer/Agent/Build-AgentMsi.ps1
       - name: Build laboratory installer
         shell: pwsh
         run: |
           dotnet tool restore
           ./installer/TestLab/Build-TestLabMsi.ps1
+      - name: Lock files unchanged by packaging
+        shell: pwsh
+        run: git diff --exit-code -- '*packages.lock.json'
       - uses: actions/upload-artifact@v4
         with:
-          name: test-lab-installer
-          path: artifacts/test-lab-installer/*.msi
+          name: installers
+          path: |
+            artifacts/agent-installer/*.msi
+            artifacts/test-lab-installer/*.msi
           if-no-files-found: error
 
   secrets:

@@ -62,5 +62,12 @@ Décision : `docs/adr/ADR-004-poste-admin-et-poste-de-reserve.md`. Protocole : `
   PREUVE : 2026-11-13 — 9 tests sur une vraie base SQLite : audit et inventaire survivent au redémarrage de l'API, migrations rejouables, base plus récente refusée, événement en double enregistré une fois, 40 écritures simultanées sans rupture de chaîne. Code PostgreSQL, jamais exécuté, retiré.
   RESTE : droits sur le dossier de la base (installeur du serveur) ; procédure de sauvegarde (tranche 6.4).
 
-- [ ] **2.5 — Agent en service Windows.** Non commencé.
-- [ ] **2.6 — MSI unique signé.** Non commencé.
+- [x] **2.5 — Agent en service Windows** (constat P1).
+  CHECK : `dotnet test DomainBridge.sln -c Release --filter "AgentService"`
+  PREUVE : 2026-11-13 — 21 tests : boucle de service, attente croissante après échec, service jamais arrêté par un serveur indisponible, choix du certificat de la machine, adresse HTTPS exigée, attente si la configuration ou le certificat arrivent après l'installation. Exécutable lancé à la main : inventaire en version 0.3.0, refus d'une adresse HTTP.
+  RESTE : exécution réelle comme service et aller-retour avec certificat vers l'API (droits d'administrateur et certificats requis) : scénario E12 sur le poste de réserve. Journal local des étapes et reprise après redémarrage : tranche 4.1.
+
+- [ ] **2.6 — MSI unique de l'agent, Intune et GPO** (constat P7).
+  CHECK : `./installer/Agent/Build-AgentMsi.ps1`
+  PREUVE PARTIELLE : 2026-11-13 — MSI construit (27 Mo) ; contenu vérifié par décompilation : service `DomainBridgeAgent` en démarrage automatique sous compte système, configuration sous HKLM, adresse du serveur conservée aux mises à jour ; fichiers de verrouillage inchangés par la construction ; un MSI non signé est refusé par les scripts Intune et GPO.
+  RESTE : **le MSI n'a jamais été installé** (droits d'administrateur requis) ; **la signature n'a jamais été exercée** (aucun certificat de signature de code) ; installeur du serveur pour le poste de l'administrateur, encore limité à l'installeur de laboratoire.

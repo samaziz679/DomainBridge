@@ -37,24 +37,41 @@ public static class Program
         }
 
         var builder = Host.CreateApplicationBuilder(args);
-        builder.Configuration.AddInMemoryCollection(ReadMachineSettings());
-        builder.Configuration.AddEnvironmentVariables("DOMAINBRIDGE_");
         builder.Services.AddWindowsService(service => service.ServiceName = AgentOptions.ServiceName);
 
-        var options = builder.Configuration.GetSection(AgentOptions.SectionName).Get<AgentOptions>() ?? new AgentOptions();
-        var problems = options.Validate();
-        if (problems.Count > 0)
+        // The loop interval is read once; the server address and the certificate are
+        // looked up again on every round until both are present.
+        var startup = ReadOptions();
+        var interval = startup.InventoryIntervalMinutes is >= 1 and <= 1440 ? startup.InventoryIntervalMinutes : 60;
+        builder.Services.AddSingleton(new AgentOptions { ServerUrl = startup.ServerUrl, InventoryIntervalMinutes = interval });
+        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddSingleton<IInventoryCycle>(new ReadinessAwareCycle(TryCreateCycle));
+        builder.Services.AddHostedService<AgentWorker>();
+
+        await builder.Build().RunAsync();
+        return 0;
+    }
+
+    private static AgentOptions ReadOptions() =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(ReadMachineSettings())
+            .AddEnvironmentVariables("DOMAINBRIDGE_")
+            .Build()
+            .GetSection(AgentOptions.SectionName)
+            .Get<AgentOptions>() ?? new AgentOptions();
+
+    private static InventoryCycle? TryCreateCycle()
+    {
+        var options = ReadOptions();
+        if (options.Validate().Count > 0)
         {
-            await Console.Error.WriteLineAsync(string.Join(Environment.NewLine, problems));
-            return 3;
+            return null;
         }
 
         var certificate = FindMachineCertificate();
         if (certificate is null)
         {
-            await Console.Error.WriteLineAsync(
-                "No valid client-authentication certificate named after this machine was found in the local machine store.");
-            return 4;
+            return null;
         }
 
         var handler = new HttpClientHandler { ClientCertificateOptions = ClientCertificateOption.Manual };
@@ -65,13 +82,7 @@ public static class Program
             Timeout = TimeSpan.FromSeconds(30)
         };
 
-        builder.Services.AddSingleton(options);
-        builder.Services.AddSingleton(TimeProvider.System);
-        builder.Services.AddSingleton<IInventoryCycle>(new InventoryCycle(new InventorySubmissionClient(httpClient), Version));
-        builder.Services.AddHostedService<AgentWorker>();
-
-        await builder.Build().RunAsync();
-        return 0;
+        return new InventoryCycle(new InventorySubmissionClient(httpClient), Version);
     }
 
     /// <summary>Settings written by the installer under HKLM, mapped to the Agent configuration section.</summary>

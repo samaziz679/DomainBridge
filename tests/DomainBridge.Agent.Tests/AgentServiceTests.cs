@@ -113,6 +113,27 @@ public sealed class AgentServiceTests
             time.RequestedDelays.Take(3));
     }
 
+    [Fact]
+    public async Task Agent_waits_until_settings_and_certificate_are_present()
+    {
+        var attempts = 0;
+        var ready = new ScriptedCycle(InventoryCycleOutcome.Accepted);
+        var cycle = new ReadinessAwareCycle(() => ++attempts < 3 ? null : ready);
+
+        var outcomes = new[]
+        {
+            await cycle.RunOnceAsync(CancellationToken.None),
+            await cycle.RunOnceAsync(CancellationToken.None),
+            await cycle.RunOnceAsync(CancellationToken.None),
+            await cycle.RunOnceAsync(CancellationToken.None)
+        };
+
+        Assert.Equal(
+            [InventoryCycleOutcome.NotReady, InventoryCycleOutcome.NotReady, InventoryCycleOutcome.Accepted, InventoryCycleOutcome.Accepted],
+            outcomes);
+        Assert.Equal(3, attempts);
+    }
+
     private static X509Certificate2 CreateAuthority()
     {
         using var key = RSA.Create(2048);
